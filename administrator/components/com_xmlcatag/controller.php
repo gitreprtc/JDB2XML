@@ -34,7 +34,7 @@ class XmlcatagController extends BaseController
             $app->enqueueMessage('Preview fout: ' . $e->getMessage(), 'error');
         }
 
-        $this->setRedirect('index.php?option=com_xmlcatag');
+        $this->setRedirect('index.php?option=com_xmlcatag&selected_file=' . urlencode($selected) . '&show_preview=1');
     }
 
     public function import()
