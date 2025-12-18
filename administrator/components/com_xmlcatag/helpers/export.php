@@ -1,11 +1,13 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+
 class XmlcatagExportHelper
 {
     public static function run(string $dir): string
     {
-        $db = JFactory::getDbo();
+        $db = Factory::getDbo();
         $ts = date('Ymd_His');
 
         // =====================

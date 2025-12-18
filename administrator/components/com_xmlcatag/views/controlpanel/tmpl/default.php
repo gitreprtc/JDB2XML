@@ -1,6 +1,7 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Factory;
 
 $app = Factory::getApplication();
@@ -78,7 +79,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
 <form action="index.php?option=com_xmlcatag" method="post" name="adminForm" id="adminForm">
   <input type="hidden" name="task" id="task" value="">
-  <?php echo JHtml::_('form.token'); ?>
+  <?php echo HTMLHelper::_('form.token'); ?>
 
   <div class="xmlcatag">
     <h2>Preview</h2>

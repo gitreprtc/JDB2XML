@@ -2,16 +2,17 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\MVC\View\HtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 
-class XmlcatagViewControlpanel extends JViewLegacy
+class XmlcatagViewControlpanel extends HtmlView
 {
     public function display($tpl = null)
     {
 
-if (\Joomla\CMS\Factory::getApplication()->input->getCmd('task') === 'preview') {
-    $this->preview = $this->get('Preview');
-}
+        if (Factory::getApplication()->getInput()->getCmd('task') === 'preview') {
+            $this->preview = $this->get('Preview');
+        }
 
         
         // C2: mixed-state visualisation (client-side only)
@@ -66,7 +67,8 @@ if (\Joomla\CMS\Factory::getApplication()->input->getCmd('task') === 'preview') 
                 }
             });
         ');
-$this->addToolbar();
+
+        $this->addToolbar();
         parent::display($tpl);
     }
 
