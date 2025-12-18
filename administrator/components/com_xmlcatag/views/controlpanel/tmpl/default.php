@@ -126,7 +126,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               <?php
                 $tree = $data['categoryTree'] ?? [];
                 if (!empty($tree)) {
-                    renderTreeWithExclude($tree);
+                    renderTreeWithExclude($tree, $fileKey);
                 } else {
                     echo '<p>Geen categorieën om te tonen.</p>';
                 }
