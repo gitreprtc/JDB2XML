@@ -2,7 +2,7 @@
 <menu>
   <submenu>
     <menu link="index.php?option=com_xmlcatag" view="controlpanel">
-      XML Cat/Tag
+      XML IMP/EXP
     </menu>
   </submenu>
 </menu>
