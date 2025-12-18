@@ -2,6 +2,8 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Application\CMSApplicationInterface;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
 
@@ -144,12 +146,10 @@ class XmlcatagController extends BaseController
         $this->setRedirect('index.php?option=com_xmlcatag');
     }
 
-    protected function getApplicationWithTokenCheck()
+    protected function getApplicationWithTokenCheck(): CMSApplicationInterface
     {
         if (!Session::checkToken()) {
-            $app = Factory::getApplication();
-            $app->enqueueMessage('Invalid Token', 'error');
-            $app->close();
+            throw new RuntimeException(Text::_('JINVALID_TOKEN'), 403);
         }
 
         return Factory::getApplication();
