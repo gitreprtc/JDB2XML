@@ -62,16 +62,16 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         }
         echo '</span>';
 
-        echo '<span class="xmlcatag-cell xmlcatag-badge-cell">';
-        if ($action !== '') {
-            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
-        }
-        echo '</span>';
-
         echo '<span class="xmlcatag-cell xmlcatag-actions">';
         if (!empty($n['children'])) {
             echo '<button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
             echo '<button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
+        }
+        echo '</span>';
+
+        echo '<span class="xmlcatag-cell xmlcatag-badge-cell">';
+        if ($action !== '') {
+            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
         }
         echo '</span>';
 
