@@ -50,22 +50,22 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
         echo '<span class="xmlcatag-cell xmlcatag-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</span>';
 
+        echo '<span class="xmlcatag-cell xmlcatag-badge-cell">';
+        if ($action !== '') {
+            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
+        }
+        echo '</span>';
+
         echo '<span class="xmlcatag-cell xmlcatag-actions">';
         if (!empty($n['children'])) {
-            echo '<button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
             echo '<button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
+            echo '<button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
         }
         echo '</span>';
 
         echo '<span class="xmlcatag-cell xmlcatag-path">';
         if ($path !== '') {
             echo '<code>' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
-        }
-        echo '</span>';
-
-        echo '<span class="xmlcatag-cell xmlcatag-badge-cell">';
-        if ($action !== '') {
-            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
         }
         echo '</span>';
 
@@ -193,9 +193,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-right { flex: 0 0 35%; min-width: 280px; }
 .xmlcatag-tree { margin: 8px 0 16px 18px; padding: 0; }
 .xmlcatag-tree li { list-style: disc; margin: 4px 0; }
-.xmlcatag-node { display:grid; grid-template-columns: minmax(120px, 180px) minmax(140px, 1fr) auto minmax(180px, 1fr) auto minmax(160px, 1fr); gap: 8px; align-items:center; }
-.xmlcatag-cell { display:block; }
-.xmlcatag-check { min-width: 120px; }
+.xmlcatag-node { display:grid; grid-template-columns: minmax(90px, 120px) minmax(160px, 1fr) auto auto minmax(180px, 1fr) minmax(160px, 1fr); gap: 10px; align-items:center; }
+.xmlcatag-cell { display:block; min-height: 26px; }
+.xmlcatag-check { min-width: 90px; }
 .xmlcatag-title { font-weight: 600; }
 .xmlcatag-actions button { margin-right: 6px; }
 .xmlcatag-exclude { display:inline-flex; align-items:center; gap: 6px; margin-right: 8px; font-size: 12px; }
