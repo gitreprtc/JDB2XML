@@ -193,11 +193,12 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-right { flex: 0 0 35%; min-width: 280px; }
 .xmlcatag-tree { margin: 8px 0 16px 18px; padding: 0; }
 .xmlcatag-tree li { list-style: disc; margin: 4px 0; }
-.xmlcatag-node { display:grid; grid-template-columns: minmax(90px, 120px) minmax(160px, 1fr) minmax(160px, 1.4fr) minmax(180px, 1.4fr) auto auto; gap: 10px; align-items:center; }
+.xmlcatag-node { display:grid; grid-template-columns: minmax(90px, 120px) minmax(170px, 1fr) minmax(220px, 1.3fr) minmax(240px, 1.3fr) auto auto; gap: 10px; align-items:center; }
 .xmlcatag-cell { display:block; min-height: 26px; }
 .xmlcatag-check { min-width: 90px; }
 .xmlcatag-title { font-weight: 600; }
-.xmlcatag-actions button { margin-right: 6px; }
+.xmlcatag-actions { white-space: nowrap; }
+.xmlcatag-actions button { margin-right: 6px; margin-bottom: 0; }
 .xmlcatag-exclude { display:inline-flex; align-items:center; gap: 6px; margin-right: 8px; font-size: 12px; }
 .xmlcatag-exclude input { margin:0; }
 .xmlcatag-path code, .xmlcatag code { font-size: 12px; }
