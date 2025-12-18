@@ -37,7 +37,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
         echo '<li class="xmlcatag-li" data-depth="' . (int)$level . '">';
         echo '<div class="xmlcatag-node">';
-        // Checkbox
+
+        echo '<span class="xmlcatag-cell xmlcatag-check">';
         if ($path !== '') {
             $checked = !empty($n['exclude']) ? ' checked' : '';
             echo '<label class="xmlcatag-exclude">';
@@ -45,26 +46,34 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
             echo '<span>Uitsluiten</span>';
             echo '</label>';
         }
+        echo '</span>';
 
-        echo '<strong class="xmlcatag-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</strong>';
-        if (!empty($n['children'])) {
-            echo '<span class="xmlcatag-actions">';
-            echo ' <button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
-            echo ' <button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
-            echo '</span>';
-        }
+        echo '<span class="xmlcatag-cell xmlcatag-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</span>';
 
+        echo '<span class="xmlcatag-cell xmlcatag-path">';
         if ($path !== '') {
-            echo ' <code class="xmlcatag-path">' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
+            echo '<code>' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
         }
+        echo '</span>';
 
-        if ($action !== '') {
-            echo ' <span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
-        }
-
+        echo '<span class="xmlcatag-cell xmlcatag-reason">';
         if ($reason !== '') {
-            echo ' <span class="xmlcatag-reason">' . htmlspecialchars($reason, ENT_QUOTES, 'UTF-8') . '</span>';
+            echo htmlspecialchars($reason, ENT_QUOTES, 'UTF-8');
         }
+        echo '</span>';
+
+        echo '<span class="xmlcatag-cell xmlcatag-badge-cell">';
+        if ($action !== '') {
+            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
+        }
+        echo '</span>';
+
+        echo '<span class="xmlcatag-cell xmlcatag-actions">';
+        if (!empty($n['children'])) {
+            echo '<button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
+            echo '<button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
+        }
+        echo '</span>';
 
         echo '</div>';
 
@@ -126,7 +135,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               <?php
                 $tree = $data['categoryTree'] ?? [];
                 if (!empty($tree)) {
-                    renderTreeWithExclude($tree);
+                    renderTreeWithExclude($tree, $fileKey);
                 } else {
                     echo '<p>Geen categorieën om te tonen.</p>';
                 }
@@ -147,7 +156,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                     <li>
                       <?php if ($alias !== ''): ?>
                         <label class="xmlcatag-exclude">
-                          <input class="xmlcatag-exclude-cb" type="checkbox" name="exclude[<?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?>]" value="1"<?php echo $checked; ?>>
+                          <input class="xmlcatag-exclude-cb" type="checkbox" name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?>]" value="1"<?php echo $checked; ?>>
                           <span>Uitsluiten</span>
                         </label>
                       <?php endif; ?>
@@ -184,10 +193,15 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-right { flex: 0 0 35%; min-width: 280px; }
 .xmlcatag-tree { margin: 8px 0 16px 18px; padding: 0; }
 .xmlcatag-tree li { list-style: disc; margin: 4px 0; }
-.xmlcatag-node { display:flex; flex-wrap:wrap; gap: 8px; align-items:center; }
+.xmlcatag-node { display:grid; grid-template-columns: minmax(90px, 120px) minmax(170px, 1fr) minmax(240px, 1.35fr) minmax(260px, 1.35fr) auto auto; gap: 10px; align-items:center; }
+.xmlcatag-cell { display:block; min-height: 26px; }
+.xmlcatag-check { min-width: 90px; }
+.xmlcatag-title { font-weight: 600; }
+.xmlcatag-actions { white-space: nowrap; }
+.xmlcatag-actions button { margin-right: 6px; margin-bottom: 0; }
 .xmlcatag-exclude { display:inline-flex; align-items:center; gap: 6px; margin-right: 8px; font-size: 12px; }
 .xmlcatag-exclude input { margin:0; }
-.xmlcatag-path, .xmlcatag code { font-size: 12px; }
+.xmlcatag-path code, .xmlcatag code { font-size: 12px; white-space: nowrap; }
 .xmlcatag-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .xmlcatag-reason { font-size: 12px; opacity: .8; }
 .xmlcatag-warn { background:#fff7e6; border:1px solid #ffe3a3; padding: 8px 10px; border-radius: 6px; margin: 10px 0; }
