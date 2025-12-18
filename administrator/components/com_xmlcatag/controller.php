@@ -1,0 +1,147 @@
+<?php
+defined('_JEXEC') or die;
+
+class XmlcatagController extends JControllerLegacy
+{
+    protected $default_view = 'controlpanel';
+
+    public function preview()
+{
+    JSession::checkToken() or jexit('Invalid Token');
+    $app = JFactory::getApplication();
+    $dir = JPATH_ROOT . '/import/xmlcatag';
+
+    $selected = basename((string) $app->input->getString('selected_file', ''));
+    $app->setUserState('com_xmlcatag.selected_file', $selected);
+
+    if (!$selected) {
+        $app->enqueueMessage('Preview geweigerd: selecteer eerst een bestand.', 'warning');
+        $this->setRedirect('index.php?option=com_xmlcatag&selected_file=' . urlencode($selected) . '&show_preview=1');
+        return;
+    }
+
+    require_once __DIR__ . '/helpers/import_preview.php';
+
+    try {
+        $data = XmlcatagImportPreviewHelper::run($dir, $selected);
+        $app->setUserState('com_xmlcatag.preview.' . $selected, $data);
+    } catch (Throwable $e) {
+        $app->enqueueMessage('Preview fout: ' . $e->getMessage(), 'error');
+    }
+
+    $this->setRedirect('index.php?option=com_xmlcatag');
+}
+
+    public function import()
+{
+    JSession::checkToken() or jexit('Invalid Token');
+    $app = JFactory::getApplication();
+
+    $selected = basename((string) $app->input->getString('selected_file', ''));
+    $app->setUserState('com_xmlcatag.selected_file', $selected);
+
+    if (!$selected) {
+        $app->enqueueMessage('Import geweigerd: selecteer eerst een bestand en voer een preview uit.', 'warning');
+        $this->setRedirect('index.php?option=com_xmlcatag');
+        return;
+    }
+
+    // Enforce mandatory preview per file
+    $preview = $app->getUserState('com_xmlcatag.preview.' . $selected);
+    if (!$preview) {
+        $app->enqueueMessage('Import geweigerd: voer eerst een preview uit voor dit bestand.', 'warning');
+        $this->setRedirect('index.php?option=com_xmlcatag');
+        return;
+    }
+
+    // Exclusions are submitted as exclude[<filename>][<key>]=1
+    $excludeAll = $app->input->get('exclude', [], 'array');
+    $exclude = (isset($excludeAll[$selected]) && is_array($excludeAll[$selected])) ? $excludeAll[$selected] : [];
+
+    // Determine rows from preview (helper may return either the file-data or wrapper)
+    $data = $preview;
+    if (is_array($preview) && isset($preview[$selected]) && is_array($preview[$selected])) {
+        $data = $preview[$selected];
+    }
+
+    $rows = array_merge($data['categories'] ?? [], $data['tags'] ?? []);
+
+    // Blocking rule: any row marked as 'overgeslagen' (skipped) must be excluded explicitly
+    foreach ($rows as $row) {
+        $key = (string)($row['id'] ?? '');
+        if (!empty($row['path'])) {
+            $key = (string)$row['path'];
+        }
+        if (($row['action'] ?? '') === 'overgeslagen' && empty($exclude[$key])) {
+            $app->enqueueMessage('Import geblokkeerd: niet alle foutieve records zijn uitgesloten.', 'warning');
+            $this->setRedirect('index.php?option=com_xmlcatag');
+            return;
+        }
+    }
+
+    require_once __DIR__ . '/helpers/import.php';
+
+    $dryRun = (bool) $app->input->getInt('dry_run', 0);
+
+    try {
+        $result = XmlcatagImportHelper::runSingle(JPATH_ROOT . '/import/xmlcatag', $selected, $dryRun, $exclude);
+        $app->enqueueMessage($result, 'message');
+        // Clear preview for this file after successful import
+        $app->setUserState('com_xmlcatag.preview.' . $selected, null);
+    } catch (Throwable $e) {
+        $app->enqueueMessage('Import fout: ' . $e->getMessage(), 'error');
+    }
+
+    $this->setRedirect('index.php?option=com_xmlcatag');
+}
+
+    public function deletefile()
+    {
+        JSession::checkToken() or jexit('Invalid Token');
+        $app = JFactory::getApplication();
+        $file = basename($app->input->getCmd('file'));
+
+        $path = JPATH_ROOT . '/import/xmlcatag/' . $file;
+
+        if ($file && is_file($path)) {
+            unlink($path);
+            $app->enqueueMessage('Bestand verwijderd: ' . $file, 'message');
+        }
+
+        // Remove preview so UI refreshes
+        $app->setUserState('com_xmlcatag.preview', null);
+        $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+
+    public function rollback()
+    {
+        JSession::checkToken() or jexit('Invalid Token');
+        require_once __DIR__ . '/helpers/rollback.php';
+        $app = JFactory::getApplication();
+
+        try {
+            $result = XmlcatagRollbackHelper::run();
+            $app->enqueueMessage($result, 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+
+    public function export()
+    {
+        JSession::checkToken() or jexit('Invalid Token');
+        require_once __DIR__ . '/helpers/export.php';
+        $app = JFactory::getApplication();
+
+        try {
+            $result = XmlcatagExportHelper::run(JPATH_ROOT . '/export/xmlcatag');
+            $app->enqueueMessage($result, 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Export fout: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+}
