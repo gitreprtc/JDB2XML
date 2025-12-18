@@ -147,7 +147,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                     <li>
                       <?php if ($alias !== ''): ?>
                         <label class="xmlcatag-exclude">
-                          <input class="xmlcatag-exclude-cb" type="checkbox" name="exclude[<?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?>]" value="1"<?php echo $checked; ?>>
+                          <input class="xmlcatag-exclude-cb" type="checkbox" name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?>]" value="1"<?php echo $checked; ?>>
                           <span>Uitsluiten</span>
                         </label>
                       <?php endif; ?>
