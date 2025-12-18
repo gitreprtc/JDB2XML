@@ -142,41 +142,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               ?>
             </div>
 
-            <div class="xmlcatag-right">
-              <h4>Tags</h4>
-              <?php if (!empty($data['tags']) && is_array($data['tags'])): ?>
-                <ul class="xmlcatag-tags">
-                  <?php foreach ($data['tags'] as $tag): 
-                    $tTitle = (string)($tag['title'] ?? '-');
-                    $alias  = (string)($tag['alias'] ?? '');
-                    $tAction = (string)($tag['action'] ?? '');
-                    $tReason = (string)($tag['reason'] ?? '');
-                    $checked = !empty($tag['exclude']) ? ' checked' : '';
-                  ?>
-                    <li>
-                      <?php if ($alias !== ''): ?>
-                        <label class="xmlcatag-exclude">
-                          <input class="xmlcatag-exclude-cb" type="checkbox" name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?>]" value="1"<?php echo $checked; ?>>
-                          <span>Uitsluiten</span>
-                        </label>
-                      <?php endif; ?>
-                      <strong><?php echo htmlspecialchars($tTitle, ENT_QUOTES, 'UTF-8'); ?></strong>
-                      <?php if ($alias !== ''): ?>
-                        <code><?php echo htmlspecialchars($alias, ENT_QUOTES, 'UTF-8'); ?></code>
-                      <?php endif; ?>
-                      <?php if ($tAction !== ''): ?>
-                        <span class="xmlcatag-badge"><?php echo htmlspecialchars($tAction, ENT_QUOTES, 'UTF-8'); ?></span>
-                      <?php endif; ?>
-                      <?php if ($tReason !== ''): ?>
-                        <span class="xmlcatag-reason"><?php echo htmlspecialchars($tReason, ENT_QUOTES, 'UTF-8'); ?></span>
-                      <?php endif; ?>
-                    </li>
-                  <?php endforeach; ?>
-                </ul>
-              <?php else: ?>
-                <p>Geen tags om te tonen.</p>
-              <?php endif; ?>
-            </div>
+            <?php // Tags section intentionally removed per request to maximize horizontal space ?>
           </div>
         </div>
       <?php endforeach; ?>
