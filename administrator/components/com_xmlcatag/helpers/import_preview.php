@@ -1,6 +1,8 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+
 require_once __DIR__ . '/ImportPlan.php';
 
 class XmlcatagImportPreviewHelper
@@ -11,7 +13,7 @@ class XmlcatagImportPreviewHelper
             throw new RuntimeException('Import map bestaat niet: ' . $dir);
         }
 
-        $db = JFactory::getDbo();
+        $db = Factory::getDbo();
         $files = glob($dir . '/*.xml') ?: [];
         $result = [];
 

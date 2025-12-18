@@ -1,6 +1,8 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+
 class XmlcatagRollbackHelper
 {
     public static function run(): string
@@ -19,7 +21,7 @@ class XmlcatagRollbackHelper
         $json = json_decode(file_get_contents($file), true);
         if (!$json) return 'Rollback-log is ongeldig JSON: ' . $basename;
 
-        $db = JFactory::getDbo();
+        $db = Factory::getDbo();
 
         // Delete created (reverse order)
         $deletedCats = 0; $deletedTags = 0;

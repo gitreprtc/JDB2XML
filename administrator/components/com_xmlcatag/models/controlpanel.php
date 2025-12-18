@@ -1,3 +1,6 @@
 <?php
 defined('_JEXEC') or die;
-class XmlcatagModelControlpanel extends JModelLegacy {}
+
+use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+
+class XmlcatagModelControlpanel extends BaseDatabaseModel {}

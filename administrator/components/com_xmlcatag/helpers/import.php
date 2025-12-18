@@ -1,6 +1,9 @@
 <?php
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+use Joomla\CMS\Table\Table;
+
 require_once __DIR__ . '/ImportPlan.php';
 
 class XmlcatagImportHelper
@@ -40,7 +43,7 @@ class XmlcatagImportHelper
         $warnings = [];
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
-        $app = JFactory::getApplication();
+        $app = Factory::getApplication();
         $preview = $app->getUserState('com_xmlcatag.preview');
         $planMap = [];
         if (is_array($preview)) {
@@ -65,22 +68,22 @@ class XmlcatagImportHelper
             }
         }
 
-        $db = JFactory::getDbo();
+        $db = Factory::getDbo();
 
         try {
             $files = glob($dir . '/*.xml') ?: [];
-        if ($selectedFile) {
-            $path = $dir . '/' . basename($selectedFile);
-            if (!is_file($path)) {
-                throw new RuntimeException('Bestand niet gevonden in import map: ' . $path);
+            if ($selectedFile) {
+                $path = $dir . '/' . basename($selectedFile);
+                if (!is_file($path)) {
+                    throw new RuntimeException('Bestand niet gevonden in import map: ' . $path);
+                }
+                $files = [$path];
             }
-            $files = [$path];
-        }
-        if (!empty($planMap)) {
-            $files = array_values(array_filter($files, function($f) use ($planMap){
-                return isset($planMap[basename($f)]);
-            }));
-        }
+            if (!empty($planMap)) {
+                $files = array_values(array_filter($files, function($f) use ($planMap){
+                    return isset($planMap[basename($f)]);
+                }));
+            }
             if (!$files) return 'Geen XML-bestanden gevonden.';
 
             foreach ($files as $file) {
@@ -184,7 +187,7 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
-            $table = JTable::getInstance('Category');
+            $table = Table::getInstance('Category');
             $data = [
                 'title' => (string) ($node->title ?? $path),
                 'alias' => (string) ($node->alias ?? ''),
@@ -259,7 +262,7 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
-            $table = JTable::getInstance('Tag');
+            $table = Table::getInstance('Tag');
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
