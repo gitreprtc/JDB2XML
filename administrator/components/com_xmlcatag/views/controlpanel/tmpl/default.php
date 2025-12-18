@@ -47,19 +47,20 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         }
 
         echo '<strong class="xmlcatag-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</strong>';
+
+        if ($action !== '') {
+            echo ' <span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
+        }
+
         if (!empty($n['children'])) {
             echo '<span class="xmlcatag-actions">';
-            echo ' <button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
             echo ' <button type="button" class="btn btn-sm btn-outline-success xmlcatag-include-all">Alles insluiten</button>';
+            echo ' <button type="button" class="btn btn-sm btn-outline-danger xmlcatag-exclude-all">Alles uitsluiten</button>';
             echo '</span>';
         }
 
         if ($path !== '') {
             echo ' <code class="xmlcatag-path">' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
-        }
-
-        if ($action !== '') {
-            echo ' <span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
         }
 
         if ($reason !== '') {
