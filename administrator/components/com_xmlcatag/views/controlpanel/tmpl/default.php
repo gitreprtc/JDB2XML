@@ -103,7 +103,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
         echo '<td class="xmlcatag-cell xmlcatag-badge-cell">';
         if ($action !== '') {
-            echo '<span class="xmlcatag-badge">' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
+            $titleAttr = $reason !== '' ? ' title="' . htmlspecialchars($reason, ENT_QUOTES, 'UTF-8') . '"' : '';
+            echo '<span class="xmlcatag-badge"' . $titleAttr . '>' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</span>';
         }
         echo '</td>';
         echo '</tr>';
@@ -221,7 +222,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                         <span class="xmlcatag-new-icon">nieuw</span>
                       <?php endif; ?>
                       <?php if ($tagAction !== ''): ?>
-                        <span class="xmlcatag-badge"><?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="xmlcatag-badge" title="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
+                          <?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>
+                        </span>
                       <?php endif; ?>
                     </li>
                   <?php endforeach; ?>
@@ -255,10 +258,10 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-actions button { margin-right: 6px; margin-bottom: 0; }
 .xmlcatag-exclude { display:inline-flex; align-items:center; gap: 6px; margin-right: 8px; font-size: 12px; }
 .xmlcatag-exclude input { margin:0; }
+.xmlcatag-path { padding-left: 18px; }
 .xmlcatag-path code, .xmlcatag code { font-size: 12px; white-space: nowrap; }
 .xmlcatag-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .xmlcatag-badge-cell { justify-self: start; }
-.xmlcatag-inline-reason { color: #b00020; font-weight: 700; margin-left: 8px; }
 .xmlcatag-filters { margin-top: 8px; display:flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .xmlcatag-filter-label { font-weight: 600; }
 .xmlcatag-filter-item { display:inline-flex; align-items:center; gap: 6px; font-size: 12px; }
@@ -276,6 +279,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   margin: 10px 0;
   border: 1px solid #b00020;
   padding: 6px 10px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .xmlcatag-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .xmlcatag-tags li { margin: 6px 0; }
@@ -316,25 +321,6 @@ document.addEventListener("DOMContentLoaded", function () {
   updateFilter();
 });
 
-document.addEventListener("click", function (e) {
-  var target = e.target;
-  if (!target) return;
-  var badge = target.closest(".xmlcatag-badge");
-  if (!badge) return;
-  var row = badge.closest(".xmlcatag-row, .xmlcatag-tag-row");
-  if (!row) return;
-  var reason = row.getAttribute("data-reason") || "";
-  if (!reason) return;
-  var existing = row.querySelector(".xmlcatag-inline-reason");
-  if (existing) {
-    existing.remove();
-    return;
-  }
-  var note = document.createElement("span");
-  note.className = "xmlcatag-inline-reason";
-  note.textContent = reason;
-  badge.insertAdjacentElement("afterend", note);
-});
 </script>
 <?php if (!empty($this->selectedFile)) : ?>
 <a class="btn btn-primary"
@@ -342,3 +328,8 @@ document.addEventListener("click", function (e) {
    Preview
 </a>
 <?php endif; ?>
+<a class="btn"
+   href="index.php?option=com_xmlcatag"
+   id="xmlcatag-reset">
+   Reset
+</a>
