@@ -68,6 +68,23 @@ class XmlcatagImportHelper
             }
         }
 
+        // If preview exists for selected file, only import categories included in preview
+        $allowedCategorySet = null;
+        if ($selectedFile && is_array($preview)) {
+            $previewData = $preview[$selectedFile] ?? null;
+            if (is_array($previewData)) {
+                $allowedCategorySet = [];
+                $rows = $previewData['categories'] ?? [];
+                foreach ($rows as $row) {
+                    $key = (string)($row['path'] ?? $row['id'] ?? '');
+                    if ($key === '' || isset($excludeSet[$key])) {
+                        continue;
+                    }
+                    $allowedCategorySet[$key] = true;
+                }
+            }
+        }
+
         $db = Factory::getDbo();
 
         try {
@@ -95,15 +112,17 @@ class XmlcatagImportHelper
                     if (!$xml) throw new RuntimeException('Ongeldige XML');
 
                     if (isset($xml->categories)) {
-                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback);
+                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     } elseif ($xml->getName() === 'categories') {
-                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback);
+                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
-                    if (isset($xml->tags)) {
-                        self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
-                    } elseif ($xml->getName() === 'tags') {
-                        self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                    if ($allowedCategorySet === null) {
+                        if (isset($xml->tags)) {
+                            self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                        } elseif ($xml->getName() === 'tags') {
+                            self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                        }
                     }
 
                     if (!$dryRun) @rename($file, $processedDir . '/' . basename($file));
@@ -131,13 +150,14 @@ class XmlcatagImportHelper
         }
     }
 
-    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback): void
+    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
         $extension = (string) ($categories['extension'] ?? 'com_content');
 
         foreach ($categories->category as $node) {
             $path = trim((string) $node->path);
             if ($path === '' || isset($exclude[$path])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$path])) { $skipped++; continue; }
 
             $query = $db->getQuery(true)
                 ->select('*')->from('#__categories')
