@@ -24,24 +24,33 @@ class XmlcatagViewControlpanel extends HtmlView
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
                 function updateMixedStates(){
-                    document.querySelectorAll(".xmlcatag-tree li").forEach(function(li){
-                        var children = li.querySelectorAll(":scope > ul > li");
-                        if(!children.length) return;
+                    var rows = Array.from(document.querySelectorAll(".xmlcatag-row[data-depth]"));
+                    rows.forEach(function(row, index){
+                        var depth = parseInt(row.getAttribute("data-depth") || "0", 10);
+                        var childRows = [];
+                        for (var i = index + 1; i < rows.length; i++) {
+                            var nextDepth = parseInt(rows[i].getAttribute("data-depth") || "0", 10);
+                            if (nextDepth <= depth) break;
+                            if (nextDepth === depth + 1) {
+                                childRows.push(rows[i]);
+                            }
+                        }
+                        if (!childRows.length) return;
                         var excluded = 0;
-                        children.forEach(function(child){
+                        childRows.forEach(function(child){
                             var cb = child.querySelector("input[type=\"checkbox\"]");
                             if(cb && cb.checked) excluded++;
                         });
-                        var node = li.querySelector(":scope > .xmlcatag-node");
+                        var node = row.querySelector(".xmlcatag-node");
                         if(!node) return;
                         node.classList.remove("mixed");
-                        if(excluded > 0 && excluded < children.length){
+                        if(excluded > 0 && excluded < childRows.length){
                             node.classList.add("mixed");
                         }
                     });
                 }
                 document.addEventListener("change", function(e){
-                    if(e.target && e.target.matches(".xmlcatag-tree input[type=\"checkbox\"]")){
+                    if(e.target && e.target.matches(".xmlcatag-table input[type=\"checkbox\"]")){
                         updateMixedStates();
                     }
                 });
@@ -57,13 +66,25 @@ class XmlcatagViewControlpanel extends HtmlView
         
                 if (t.classList.contains("xmlcatag-exclude-all") || t.classList.contains("xmlcatag-include-all")) {
                     e.preventDefault();
-                    var li = t.closest("li");
-                    if (!li) return;
+                    var row = t.closest("tr");
+                    if (!row) return;
+                    var rows = Array.from(document.querySelectorAll(".xmlcatag-row[data-depth]"));
+                    var index = rows.indexOf(row);
+                    if (index === -1) return;
+                    var depth = parseInt(row.getAttribute("data-depth") || "0", 10);
                     var exclude = t.classList.contains("xmlcatag-exclude-all");
-                    li.querySelectorAll("input[type=\"checkbox\"]").forEach(function(cb){
+                    row.querySelectorAll("input[type=\"checkbox\"]").forEach(function(cb){
                         cb.checked = exclude ? true : false;
                         cb.dispatchEvent(new Event("change", {bubbles:true}));
                     });
+                    for (var i = index + 1; i < rows.length; i++) {
+                        var nextDepth = parseInt(rows[i].getAttribute("data-depth") || "0", 10);
+                        if (nextDepth <= depth) break;
+                        rows[i].querySelectorAll("input[type=\"checkbox\"]").forEach(function(cb){
+                            cb.checked = exclude ? true : false;
+                            cb.dispatchEvent(new Event("change", {bubbles:true}));
+                        });
+                    }
                 }
             });
         ');
