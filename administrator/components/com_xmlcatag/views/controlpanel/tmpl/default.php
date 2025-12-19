@@ -150,6 +150,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
       <span>Zoek:</span>
       <input type="search" class="xmlcatag-search-input" placeholder="zoek..." aria-label="Zoek in preview">
     </label>
+    <button type="button" class="btn" id="xmlcatag-reset" data-reset-url="index.php?option=com_xmlcatag">
+      Reset preview
+    </button>
   </div>
 <?php endif; ?>
 
@@ -163,14 +166,13 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
       <?php foreach ($preview as $fileKey => $data): ?>
         <div class="xmlcatag-file">
-          <?php if (!empty($data['warnings']) && is_array($data['warnings'])): ?>
-            <div class="xmlcatag-warn" role="alert">
-              <?php echo htmlspecialchars('Waarschuwingen: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
-
           <div class="xmlcatag-grid">
             <div class="xmlcatag-left">
+              <?php if (!empty($data['warnings']) && is_array($data['warnings'])): ?>
+                <div class="xmlcatag-warn" role="alert">
+                  <?php echo htmlspecialchars('Waarschuwingen: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+              <?php endif; ?>
               <h4>Categorieën</h4>
               <?php
                 $tree = $data['categoryTree'] ?? [];
@@ -258,7 +260,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-actions button { margin-right: 6px; margin-bottom: 0; }
 .xmlcatag-exclude { display:inline-flex; align-items:center; gap: 6px; margin-right: 8px; font-size: 12px; }
 .xmlcatag-exclude input { margin:0; }
-.xmlcatag-path { padding-left: 18px; }
+.xmlcatag-path { padding-left: 48px; }
 .xmlcatag-path code, .xmlcatag code { font-size: 12px; white-space: nowrap; }
 .xmlcatag-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .xmlcatag-badge-cell { justify-self: start; }
@@ -280,7 +282,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   border: 1px solid #b00020;
   padding: 6px 10px;
   box-sizing: border-box;
-  max-width: 100%;
+  width: 100%;
 }
 .xmlcatag-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .xmlcatag-tags li { margin: 6px 0; }
@@ -319,6 +321,14 @@ document.addEventListener("DOMContentLoaded", function () {
   filterContainer.addEventListener("change", updateFilter);
   filterContainer.addEventListener("input", updateFilter);
   updateFilter();
+
+  var resetButton = document.getElementById("xmlcatag-reset");
+  if (resetButton) {
+    resetButton.addEventListener("click", function () {
+      var resetUrl = resetButton.getAttribute("data-reset-url") || "index.php?option=com_xmlcatag";
+      window.location.href = resetUrl;
+    });
+  }
 });
 
 </script>
@@ -328,8 +338,3 @@ document.addEventListener("DOMContentLoaded", function () {
    Preview
 </a>
 <?php endif; ?>
-<a class="btn"
-   href="index.php?option=com_xmlcatag"
-   id="xmlcatag-reset">
-   Reset
-</a>
