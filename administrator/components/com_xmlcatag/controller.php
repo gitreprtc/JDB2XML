@@ -131,6 +131,17 @@ class XmlcatagController extends BaseController
         $this->setRedirect('index.php?option=com_xmlcatag');
     }
 
+    public function resetpreview()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $selected = basename((string) $app->input->getString('selected_file', ''));
+        if ($selected) {
+            $app->setUserState('com_xmlcatag.preview.' . $selected, null);
+        }
+        $app->setUserState('com_xmlcatag.selected_file', '');
+        $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+
     public function export()
     {
         require_once __DIR__ . '/helpers/export.php';

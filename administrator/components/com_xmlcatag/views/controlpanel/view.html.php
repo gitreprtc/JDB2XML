@@ -20,6 +20,11 @@ class XmlcatagViewControlpanel extends HtmlView
         $doc->addStyleDeclaration('
             .xmlcatag-node.mixed{background:transparent;border-left:0;padding-left:0;}
             .xmlcatag-node.mixed::after{content:"gemengd";font-size:inherit;color:inherit;margin-left:8px;}
+            #toolbar-preview .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
+            #toolbar-import .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
+            #toolbar-export .btn{background:#1976d2;border-color:#1976d2;color:#fff;}
+            #toolbar-rollback .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
+            #toolbar-resetpreview .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
         ');
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
@@ -103,6 +108,7 @@ class XmlcatagViewControlpanel extends HtmlView
         ToolbarHelper::custom('export', 'download', 'download', 'Export', false);
 
         ToolbarHelper::divider();
+        ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('rollback', 'undo', 'undo', 'Rollback', false);
     }
 }
