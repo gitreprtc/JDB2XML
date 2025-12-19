@@ -104,11 +104,11 @@ class XmlcatagViewControlpanel extends HtmlView
 
         // These buttons submit the adminForm with the given task.
         ToolbarHelper::custom('preview', 'search', 'search', 'Preview', false);
+        ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('import', 'upload', 'upload', 'Import', false);
         ToolbarHelper::custom('export', 'download', 'download', 'Export', false);
 
         ToolbarHelper::divider();
-        ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('rollback', 'undo', 'undo', 'Rollback', false);
     }
 }
