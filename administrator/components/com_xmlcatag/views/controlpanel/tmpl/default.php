@@ -66,8 +66,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         $action = (string)($n['action'] ?? '');
         $reason = (string)($n['reason'] ?? '');
 
+        $prefix = $level > 0 ? str_repeat('-', $level) . ' ' : '';
+        $search = strtolower(trim($title . ' ' . $path . ' ' . $reason));
         $actionAttr = $action !== '' ? ' data-action="' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '"' : '';
-        echo '<tr class="xmlcatag-row" data-depth="' . (int)$level . '"' . $actionAttr . '>';
+        echo '<tr class="xmlcatag-row" data-depth="' . (int)$level . '"' . $actionAttr
+            . ' data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '">';
 
         echo '<td class="xmlcatag-cell xmlcatag-check">';
         if ($path !== '') {
@@ -81,7 +84,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
         $indent = $level * 18;
         echo '<td class="xmlcatag-cell xmlcatag-title" style="padding-left:' . (int)$indent . 'px;">';
-        echo '<span class="xmlcatag-node">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</span>';
+        echo '<span class="xmlcatag-node">' . htmlspecialchars($prefix . $title, ENT_QUOTES, 'UTF-8') . '</span>';
         echo '</td>';
 
         echo '<td class="xmlcatag-cell xmlcatag-path">';
@@ -139,17 +142,19 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
 <?php if (!empty($preview) && is_array($preview)) : ?>
   <?php $filterActions = collectActions($preview); ?>
-  <?php if (!empty($filterActions)) : ?>
-    <div class="xmlcatag-filters" data-xmlcatag-filters>
-      <span class="xmlcatag-filter-label">Filter:</span>
-      <?php foreach ($filterActions as $action) : ?>
-        <label class="xmlcatag-filter-item">
-          <input type="checkbox" class="xmlcatag-filter-cb" data-action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" checked>
-          <span><?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?></span>
-        </label>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
+  <div class="xmlcatag-filters" data-xmlcatag-filters>
+    <span class="xmlcatag-filter-label">Filter:</span>
+    <?php foreach ($filterActions as $action) : ?>
+      <label class="xmlcatag-filter-item">
+        <input type="checkbox" class="xmlcatag-filter-cb" data-action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" checked>
+        <span><?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?></span>
+      </label>
+    <?php endforeach; ?>
+    <label class="xmlcatag-filter-item xmlcatag-search">
+      <span>Zoek:</span>
+      <input type="search" class="xmlcatag-search-input" placeholder="zoek..." aria-label="Zoek in preview">
+    </label>
+  </div>
 <?php endif; ?>
 
 
@@ -205,8 +210,24 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                 <ul class="xmlcatag-tags">
                   <?php foreach ($data['tags'] as $tag): ?>
                     <?php $tagAction = (string)($tag['action'] ?? ''); ?>
-                    <li class="xmlcatag-tag-row" data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>">
-                      <span><?php echo htmlspecialchars((string)($tag['title'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php
+                      $tagTitle = (string)($tag['title'] ?? '-');
+                      $tagAlias = (string)($tag['id'] ?? '');
+                      $tagExclude = !empty($tag['exclude']);
+                      $tagSearch = strtolower(trim($tagTitle . ' ' . $tagAlias));
+                    ?>
+                    <li class="xmlcatag-tag-row"
+                        data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-search="<?php echo htmlspecialchars($tagSearch, ENT_QUOTES, 'UTF-8'); ?>">
+                      <?php if ($tagAlias !== ''): ?>
+                        <label class="xmlcatag-exclude">
+                          <input class="xmlcatag-exclude-cb" type="checkbox"
+                                 name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?>]"
+                                 value="1"<?php echo $tagExclude ? ' checked' : ''; ?>>
+                          <span>Uitsluiten</span>
+                        </label>
+                      <?php endif; ?>
+                      <span><?php echo htmlspecialchars($tagTitle, ENT_QUOTES, 'UTF-8'); ?></span>
                       <?php if ($tagAction === 'nieuw'): ?>
                         <span class="xmlcatag-new-icon">nieuw</span>
                       <?php endif; ?>
@@ -253,6 +274,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-filter-label { font-weight: 600; }
 .xmlcatag-filter-item { display:inline-flex; align-items:center; gap: 6px; font-size: 12px; }
 .xmlcatag-filter-item input { margin: 0; }
+.xmlcatag-search { flex: 1 1 220px; }
+.xmlcatag-search-input { width: 100%; max-width: 280px; }
 .xmlcatag-new-icon { display:inline-flex; align-items:center; gap: 4px; color: #1b7f1b; font-weight: 700; font-size: 13px; }
 .xmlcatag-new-icon::before { content: "🟢"; font-size: 12px; }
 .xmlcatag-tag-row { display:flex; gap: 8px; align-items:center; margin: 6px 0; }
@@ -274,24 +297,33 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!filterContainer) return;
 
   function updateFilter() {
+    var searchInput = filterContainer.querySelector(".xmlcatag-search-input");
+    var searchTerm = searchInput ? (searchInput.value || "").toLowerCase().trim() : "";
     var checked = Array.from(filterContainer.querySelectorAll(".xmlcatag-filter-cb:checked"))
       .map(function (cb) { return cb.getAttribute("data-action") || ""; })
       .filter(Boolean);
 
     document.querySelectorAll(".xmlcatag-row[data-action]").forEach(function (row) {
       var action = row.getAttribute("data-action") || "";
-      var shouldShow = checked.includes(action);
+      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
+      var actionMatch = checked.includes(action);
+      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
+      var shouldShow = actionMatch && searchMatch;
       row.classList.toggle("xmlcatag-filter-hidden", !shouldShow);
     });
 
     document.querySelectorAll(".xmlcatag-tag-row[data-action]").forEach(function (row) {
       var action = row.getAttribute("data-action") || "";
-      var shouldShow = checked.includes(action);
+      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
+      var actionMatch = checked.includes(action);
+      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
+      var shouldShow = actionMatch && searchMatch;
       row.classList.toggle("xmlcatag-filter-hidden", !shouldShow);
     });
   }
 
   filterContainer.addEventListener("change", updateFilter);
+  filterContainer.addEventListener("input", updateFilter);
   updateFilter();
 });
 </script>

@@ -241,7 +241,7 @@ class XmlcatagImportHelper
                     if ($value === '') continue;
                     if (!property_exists($existing, $field)) continue;
                     $dbVal = (string) ($existing->$field ?? '');
-                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                    if ($dbVal !== $value) {
                         $before['fields'][$field] = $dbVal;
                         $existing->$field = $value;
                         $changed = true;
