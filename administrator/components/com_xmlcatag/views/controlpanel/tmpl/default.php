@@ -19,6 +19,38 @@ if ($showPreview && $selected) {
     $preview = $app->getUserState('com_xmlcatag.preview.' . $selected);
 }
 
+function collectActionsFromTree(array $nodes, array &$actions): void
+{
+    foreach ($nodes as $n) {
+        $action = (string)($n['action'] ?? '');
+        if ($action !== '') {
+            $actions[$action] = true;
+        }
+        if (!empty($n['children']) && is_array($n['children'])) {
+            collectActionsFromTree($n['children'], $actions);
+        }
+    }
+}
+
+function collectActions(array $preview): array
+{
+    $actions = [];
+    foreach ($preview as $data) {
+        if (!empty($data['categoryTree']) && is_array($data['categoryTree'])) {
+            collectActionsFromTree($data['categoryTree'], $actions);
+        }
+        if (!empty($data['tags']) && is_array($data['tags'])) {
+            foreach ($data['tags'] as $tag) {
+                $action = (string)($tag['action'] ?? '');
+                if ($action !== '') {
+                    $actions[$action] = true;
+                }
+            }
+        }
+    }
+    return array_keys($actions);
+}
+
 /**
  * Render a category tree with per-node exclude checkbox.
  * Exclude keys are category paths (import helper uses $exclude[$path]).
@@ -35,8 +67,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         $action = (string)($n['action'] ?? '');
         $reason = (string)($n['reason'] ?? '');
 
-        echo '<li class="xmlcatag-li" data-depth="' . (int)$level . '">';
-        echo '<div class="xmlcatag-node">';
+        $actionAttr = $action !== '' ? ' data-action="' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '"' : '';
+        echo '<li class="xmlcatag-li" data-depth="' . (int)$level . '"' . $actionAttr . '>';
+        echo '<div class="xmlcatag-node"' . $actionAttr . '>';
 
         echo '<span class="xmlcatag-cell xmlcatag-check">';
         if ($path !== '') {
@@ -106,6 +139,21 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   <span class="xmlcatag-hint">Kies een bestand en klik daarna op <strong>Preview</strong>.</span>
 </div>
 
+<?php if (!empty($preview) && is_array($preview)) : ?>
+  <?php $filterActions = collectActions($preview); ?>
+  <?php if (!empty($filterActions)) : ?>
+    <div class="xmlcatag-filters" data-xmlcatag-filters>
+      <span class="xmlcatag-filter-label">Filter:</span>
+      <?php foreach ($filterActions as $action) : ?>
+        <label class="xmlcatag-filter-item">
+          <input type="checkbox" class="xmlcatag-filter-cb" data-action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" checked>
+          <span><?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?></span>
+        </label>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+<?php endif; ?>
+
 
 
     <?php if (!$showPreview): ?>
@@ -142,7 +190,27 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               ?>
             </div>
 
-            <?php // Tags section intentionally removed per request to maximize horizontal space ?>
+            <div class="xmlcatag-right">
+              <h4>Tags</h4>
+              <?php if (!empty($data['tags']) && is_array($data['tags'])): ?>
+                <ul class="xmlcatag-tags">
+                  <?php foreach ($data['tags'] as $tag): ?>
+                    <?php $tagAction = (string)($tag['action'] ?? ''); ?>
+                    <li class="xmlcatag-tag-row" data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>">
+                      <span><?php echo htmlspecialchars((string)($tag['title'] ?? '-'), ENT_QUOTES, 'UTF-8'); ?></span>
+                      <?php if ($tagAction === 'nieuw'): ?>
+                        <span class="xmlcatag-new-icon">nieuw</span>
+                      <?php endif; ?>
+                      <?php if ($tagAction !== ''): ?>
+                        <span class="xmlcatag-badge"><?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?></span>
+                      <?php endif; ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <p>Geen tags om te tonen.</p>
+              <?php endif; ?>
+            </div>
           </div>
         </div>
       <?php endforeach; ?>
@@ -172,6 +240,14 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .xmlcatag-badge-cell { justify-self: start; }
 .xmlcatag-reason { font-size: 12px; opacity: .8; white-space: nowrap; }
+.xmlcatag-filters { margin-top: 8px; display:flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.xmlcatag-filter-label { font-weight: 600; }
+.xmlcatag-filter-item { display:inline-flex; align-items:center; gap: 6px; font-size: 12px; }
+.xmlcatag-filter-item input { margin: 0; }
+.xmlcatag-new-icon { display:inline-flex; align-items:center; gap: 4px; color: #1b7f1b; font-weight: 700; font-size: 13px; }
+.xmlcatag-new-icon::before { content: "🟢"; font-size: 12px; }
+.xmlcatag-tag-row { display:flex; gap: 8px; align-items:center; margin: 6px 0; }
+.xmlcatag-filter-hidden { display: none; }
 .xmlcatag-warn {
   color: #b00020;
   font-weight: 700;
@@ -183,6 +259,33 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .xmlcatag-tags li { margin: 6px 0; }
 </style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var filterContainer = document.querySelector("[data-xmlcatag-filters]");
+  if (!filterContainer) return;
+
+  function updateFilter() {
+    var checked = Array.from(filterContainer.querySelectorAll(".xmlcatag-filter-cb:checked"))
+      .map(function (cb) { return cb.getAttribute("data-action") || ""; })
+      .filter(Boolean);
+
+    document.querySelectorAll(".xmlcatag-node[data-action]").forEach(function (node) {
+      var action = node.getAttribute("data-action") || "";
+      var shouldShow = checked.length === 0 || checked.includes(action);
+      node.classList.toggle("xmlcatag-filter-hidden", !shouldShow);
+    });
+
+    document.querySelectorAll(".xmlcatag-tag-row[data-action]").forEach(function (row) {
+      var action = row.getAttribute("data-action") || "";
+      var shouldShow = checked.length === 0 || checked.includes(action);
+      row.classList.toggle("xmlcatag-filter-hidden", !shouldShow);
+    });
+  }
+
+  filterContainer.addEventListener("change", updateFilter);
+  updateFilter();
+});
+</script>
 <?php if (!empty($this->selectedFile)) : ?>
 <a class="btn btn-primary"
    href="index.php?option=com_xmlcatag&task=preview&filename=<?php echo urlencode($this->selectedFile); ?>">

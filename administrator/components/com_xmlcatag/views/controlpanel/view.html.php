@@ -18,8 +18,8 @@ class XmlcatagViewControlpanel extends HtmlView
         // C2: mixed-state visualisation (client-side only)
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('
-            .xmlcatag-node.mixed{background:#fff6e5;border-left:4px solid #de9a3a;padding-left:6px;}
-            .xmlcatag-node.mixed::after{content:"gemengd";font-size:11px;color:#de9a3a;margin-left:8px;}
+            .xmlcatag-node.mixed{background:transparent;border-left:0;padding-left:0;}
+            .xmlcatag-node.mixed::after{content:"gemengd";font-size:inherit;color:inherit;margin-left:8px;}
         ');
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
