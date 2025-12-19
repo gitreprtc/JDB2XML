@@ -134,6 +134,13 @@ class XmlcatagController extends BaseController
         $this->setRedirect('index.php?option=com_xmlcatag');
     }
 
+    public function refreshsftp()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $app->setUserState('com_xmlcatag.selected_file', '');
+        $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+
     public function resetpreview()
     {
         $app = $this->getApplicationWithTokenCheck();

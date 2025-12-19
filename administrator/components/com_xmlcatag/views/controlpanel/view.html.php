@@ -25,6 +25,7 @@ class XmlcatagViewControlpanel extends HtmlView
             #toolbar-export .btn{background:#1976d2;border-color:#1976d2;color:#fff;}
             #toolbar-rollback .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
             #toolbar-resetpreview .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
+            #toolbar-refreshsftp .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
         ');
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
@@ -109,6 +110,7 @@ class XmlcatagViewControlpanel extends HtmlView
         ToolbarHelper::custom('export', 'download', 'download', 'Export', false);
 
         ToolbarHelper::divider();
+        ToolbarHelper::custom('refreshsftp', 'refresh', 'refresh', 'Refresh SFTP', false);
         ToolbarHelper::custom('rollback', 'undo', 'undo', 'Rollback', false);
     }
 }

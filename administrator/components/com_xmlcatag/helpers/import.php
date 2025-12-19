@@ -310,6 +310,7 @@ class XmlcatagImportHelper
                 'parent_id' => 1,
             ];
             $table->bind($data);
+            $table->setLocation(1, 'last-child');
             $table->store();
 
             $rollback['created']['tags'][] = (int) $table->id;
