@@ -241,7 +241,15 @@ class XmlcatagImportHelper
             ];
             $table->bind($data);
             $table->setLocation($parentId, 'last-child');
-            $table->store();
+            if (!$table->check()) {
+                throw new RuntimeException('Categorie check mislukt: ' . $table->getError());
+            }
+            if (!$table->store()) {
+                throw new RuntimeException('Categorie opslaan mislukt: ' . $table->getError());
+            }
+            if (method_exists($table, 'rebuildPath')) {
+                $table->rebuildPath($table->id);
+            }
 
             $rollback['created']['categories'][] = (int) $table->id;
             $created++;
@@ -305,6 +313,7 @@ class XmlcatagImportHelper
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
+                'path' => (string) ($node->path ?? $alias),
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
@@ -315,7 +324,12 @@ class XmlcatagImportHelper
             ];
             $table->bind($data);
             $table->setLocation(1, 'last-child');
-            $table->store();
+            if (!$table->check()) {
+                throw new RuntimeException('Tag check mislukt: ' . $table->getError());
+            }
+            if (!$table->store()) {
+                throw new RuntimeException('Tag opslaan mislukt: ' . $table->getError());
+            }
 
             $rollback['created']['tags'][] = (int) $table->id;
             $created++;
