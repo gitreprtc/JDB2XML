@@ -297,7 +297,10 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
-            $table = Table::getInstance('Tag');
+            $table = Table::getInstance('Tag', 'JTable');
+            if ($table === false) {
+                throw new RuntimeException('Tag-table kan niet worden geladen');
+            }
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
