@@ -119,7 +119,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
           <h3><?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?></h3>
 
           <?php if (!empty($data['warnings']) && is_array($data['warnings'])): ?>
-            <div class="xmlcatag-warn">
+            <div class="xmlcatag-warn" role="alert">
               <strong>Waarschuwingen</strong>
               <ul>
                 <?php foreach ($data['warnings'] as $w): ?>
@@ -172,7 +172,17 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .xmlcatag-badge-cell { justify-self: start; }
 .xmlcatag-reason { font-size: 12px; opacity: .8; white-space: nowrap; }
-.xmlcatag-warn { background:#fff7e6; border:1px solid #ffe3a3; padding: 8px 10px; border-radius: 6px; margin: 10px 0; }
+.xmlcatag-warn {
+  background: #fff4e5;
+  border: 1px solid #f0b37e;
+  border-left: 4px solid #f0b37e;
+  color: #5c3d00;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+.xmlcatag-warn strong { display: block; margin-bottom: 4px; }
+.xmlcatag-warn ul { margin: 6px 0 0 18px; }
 .xmlcatag-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .xmlcatag-tags li { margin: 6px 0; }
 </style>
