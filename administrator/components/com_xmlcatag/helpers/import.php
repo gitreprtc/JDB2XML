@@ -297,7 +297,8 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
-            $table = Table::getInstance('Tag', 'JTable');
+            Table::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_tags/tables');
+            $table = Table::getInstance('Tag', 'TagsTable');
             if ($table === false) {
                 throw new RuntimeException('Tag-table kan niet worden geladen');
             }
