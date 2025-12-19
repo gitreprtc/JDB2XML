@@ -70,6 +70,7 @@ class XmlcatagImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
+        $allowTags = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -82,6 +83,7 @@ class XmlcatagImportHelper
                     }
                     $allowedCategorySet[$key] = true;
                 }
+                $allowTags = !empty($previewData['tags']) && is_array($previewData['tags']);
             }
         }
 
@@ -117,7 +119,7 @@ class XmlcatagImportHelper
                         self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
-                    if ($allowedCategorySet === null) {
+                    if ($allowTags) {
                         if (isset($xml->tags)) {
                             self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
                         } elseif ($xml->getName() === 'tags') {
