@@ -121,17 +121,9 @@ class XmlcatagController extends BaseController
 
     public function rollback()
     {
-        require_once __DIR__ . '/helpers/rollback.php';
         $app = $this->getApplicationWithTokenCheck();
-
-        try {
-            $result = XmlcatagRollbackHelper::run();
-            $app->enqueueMessage($result, 'message');
-        } catch (Throwable $e) {
-            $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
-        }
-
-        $this->setRedirect('index.php?option=com_xmlcatag');
+        $app->setUserState('com_xmlcatag.show_rollback', 1);
+        $this->setRedirect('index.php?option=com_xmlcatag&show_rollback=1');
     }
 
     public function refreshsftp()
@@ -139,6 +131,24 @@ class XmlcatagController extends BaseController
         $app = $this->getApplicationWithTokenCheck();
         $app->setUserState('com_xmlcatag.selected_file', '');
         $this->setRedirect('index.php?option=com_xmlcatag');
+    }
+
+    public function rollbackapply()
+    {
+        require_once __DIR__ . '/helpers/rollback.php';
+        $app = $this->getApplicationWithTokenCheck();
+
+        $type = $app->input->getCmd('rollback_type', 'categories');
+        $file = basename((string) $app->input->getString('rollback_file', ''));
+
+        try {
+            $result = XmlcatagRollbackHelper::apply($type, $file);
+            $app->enqueueMessage($result, 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_xmlcatag&show_rollback=1');
     }
 
     public function resetpreview()

@@ -13,10 +13,19 @@ $filenames = array_map('basename', $files);
 
 $selected = basename((string) $input->getString('selected_file', (string) $app->getUserState('com_xmlcatag.selected_file', '')));
 $showPreview = (int) $input->getInt('show_preview', 0) === 1;
+$showRollback = (int) $input->getInt('show_rollback', (int) $app->getUserState('com_xmlcatag.show_rollback', 0)) === 1;
 
 $preview = null;
 if ($showPreview && $selected) {
     $preview = $app->getUserState('com_xmlcatag.preview.' . $selected);
+}
+
+$rollbackCategories = [];
+$rollbackTags = [];
+if ($showRollback) {
+    require_once __DIR__ . '/../../helpers/rollback.php';
+    $rollbackCategories = XmlcatagRollbackHelper::listLogsByType('categories');
+    $rollbackTags = XmlcatagRollbackHelper::listLogsByType('tags');
 }
 
 function collectActionsFromTree(array $nodes, array &$actions): void
@@ -118,6 +127,48 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     }
 }
 ?>
+
+<?php if ($showRollback): ?>
+  <div class="xmlcatag">
+    <h2>Rollback</h2>
+    <div class="xmlcatag-grid">
+      <div class="xmlcatag-left">
+        <h4>Categorieën</h4>
+        <form action="index.php?option=com_xmlcatag" method="post" class="xmlcatag-rollback-form">
+          <input type="hidden" name="task" value="rollbackapply">
+          <input type="hidden" name="rollback_type" value="categories">
+          <?php echo HTMLHelper::_('form.token'); ?>
+          <select name="rollback_file" class="xmlcatag-rollback-select">
+            <option value="">-- selecteer --</option>
+            <?php foreach ($rollbackCategories as $file): ?>
+              <option value="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <button type="submit" class="btn btn-warning">Rollback categorieën</button>
+        </form>
+      </div>
+      <div class="xmlcatag-right">
+        <h4>Tags</h4>
+        <form action="index.php?option=com_xmlcatag" method="post" class="xmlcatag-rollback-form">
+          <input type="hidden" name="task" value="rollbackapply">
+          <input type="hidden" name="rollback_type" value="tags">
+          <?php echo HTMLHelper::_('form.token'); ?>
+          <select name="rollback_file" class="xmlcatag-rollback-select">
+            <option value="">-- selecteer --</option>
+            <?php foreach ($rollbackTags as $file): ?>
+              <option value="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <button type="submit" class="btn btn-warning">Rollback tags</button>
+        </form>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
 
 <form action="index.php?option=com_xmlcatag" method="post" name="adminForm" id="adminForm">
   <input type="hidden" name="task" id="task" value="">
@@ -324,6 +375,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 }
 .xmlcatag-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .xmlcatag-tags li { margin: 6px 0; }
+.xmlcatag-rollback-form { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.xmlcatag-rollback-select { min-width: 240px; }
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
