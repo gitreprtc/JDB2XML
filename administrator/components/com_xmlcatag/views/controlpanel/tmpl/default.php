@@ -86,6 +86,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         $indent = $level * 18;
         echo '<td class="xmlcatag-cell xmlcatag-title" style="padding-left:' . (int)$indent . 'px;">';
         echo '<span class="xmlcatag-node">' . htmlspecialchars($prefix . $title, ENT_QUOTES, 'UTF-8') . '</span>';
+        if ($action === 'nieuw') {
+            echo ' <span class="xmlcatag-new-icon">nieuw</span>';
+        }
         echo '</td>';
 
         echo '<td class="xmlcatag-cell xmlcatag-path">';
@@ -181,40 +184,61 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                   </div>
                 <?php endif; ?>
                 <h4>Tags</h4>
-                <ul class="xmlcatag-tags">
-                  <?php foreach ($data['tags'] as $tag): ?>
-                    <?php $tagAction = (string)($tag['action'] ?? ''); ?>
-                    <?php
-                      $tagTitle = (string)($tag['title'] ?? '-');
-                      $tagAlias = (string)($tag['id'] ?? '');
-                      $tagExclude = !empty($tag['exclude']);
-                      $tagReason = (string)($tag['reason'] ?? '');
-                      $tagSearch = strtolower(trim($tagTitle . ' ' . $tagAlias));
-                    ?>
-                    <li class="xmlcatag-tag-row"
-                        data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-search="<?php echo htmlspecialchars($tagSearch, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-reason="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
-                      <?php if ($tagAlias !== ''): ?>
-                        <label class="xmlcatag-exclude">
-                          <input class="xmlcatag-exclude-cb" type="checkbox"
-                                 name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?>]"
-                                 value="1"<?php echo $tagExclude ? ' checked' : ''; ?>>
-                          <span>Uitsluiten</span>
-                        </label>
-                      <?php endif; ?>
-                      <span><?php echo htmlspecialchars($tagTitle, ENT_QUOTES, 'UTF-8'); ?></span>
-                      <?php if ($tagAction === 'nieuw'): ?>
-                        <span class="xmlcatag-new-icon">nieuw</span>
-                      <?php endif; ?>
-                      <?php if ($tagAction !== ''): ?>
-                        <span class="xmlcatag-badge" title="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
-                          <?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>
-                        </span>
-                      <?php endif; ?>
-                    </li>
-                  <?php endforeach; ?>
-                </ul>
+                <table class="xmlcatag-table">
+                  <thead><tr>
+                    <th class="xmlcatag-head-check">Actie</th>
+                    <th class="xmlcatag-head-title">Titel</th>
+                    <th>Alias</th>
+                    <th></th>
+                    <th></th>
+                  </tr></thead>
+                  <tbody>
+                    <?php foreach ($data['tags'] as $tag): ?>
+                      <?php $tagAction = (string)($tag['action'] ?? ''); ?>
+                      <?php
+                        $tagTitle = (string)($tag['title'] ?? '-');
+                        $tagAlias = (string)($tag['id'] ?? '');
+                        $tagExclude = !empty($tag['exclude']);
+                        $tagReason = (string)($tag['reason'] ?? '');
+                        $tagSearch = strtolower(trim($tagTitle . ' ' . $tagAlias));
+                      ?>
+                      <tr class="xmlcatag-tag-row"
+                          data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>"
+                          data-search="<?php echo htmlspecialchars($tagSearch, ENT_QUOTES, 'UTF-8'); ?>"
+                          data-reason="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
+                        <td class="xmlcatag-cell xmlcatag-check">
+                          <?php if ($tagAlias !== ''): ?>
+                            <label class="xmlcatag-exclude">
+                              <input class="xmlcatag-exclude-cb" type="checkbox"
+                                     name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?>]"
+                                     value="1"<?php echo $tagExclude ? ' checked' : ''; ?>>
+                              <span>Uitsluiten</span>
+                            </label>
+                          <?php endif; ?>
+                        </td>
+                        <td class="xmlcatag-cell xmlcatag-title">
+                          <?php echo htmlspecialchars($tagTitle, ENT_QUOTES, 'UTF-8'); ?>
+                          <?php if ($tagAction === 'nieuw'): ?>
+                            <span class="xmlcatag-new-icon">nieuw</span>
+                          <?php endif; ?>
+                        </td>
+                        <td class="xmlcatag-cell xmlcatag-path">
+                          <?php if ($tagAlias !== ''): ?>
+                            <code><?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?></code>
+                          <?php endif; ?>
+                        </td>
+                        <td class="xmlcatag-cell xmlcatag-actions"></td>
+                        <td class="xmlcatag-cell xmlcatag-badge-cell">
+                          <?php if ($tagAction !== ''): ?>
+                            <span class="xmlcatag-badge" title="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
+                              <?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>
+                            </span>
+                          <?php endif; ?>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
               </div>
             <?php endif; ?>
 
@@ -287,7 +311,6 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-filter-actions { display:inline-flex; align-items:center; }
 .xmlcatag-new-icon { display:inline-flex; align-items:center; gap: 4px; color: #1b7f1b; font-weight: 700; font-size: 13px; }
 .xmlcatag-new-icon::before { content: "🟢"; font-size: 12px; }
-.xmlcatag-tag-row { display:flex; gap: 8px; align-items:center; margin: 6px 0; }
 .xmlcatag-filter-hidden { display: none; }
 .xmlcatag-warn {
   color: #b00020;
