@@ -15,6 +15,10 @@ class XmlcatagImportPreviewHelper
 
         $db = Factory::getDbo();
         $files = glob($dir . '/*.xml') ?: [];
+        if ($selectedFile) {
+            $path = $dir . '/' . basename($selectedFile);
+            $files = is_file($path) ? [$path] : [];
+        }
         $result = [];
 
         foreach ($files as $file) {
