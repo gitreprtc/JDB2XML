@@ -123,7 +123,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               <strong>Waarschuwingen</strong>
               <ul>
                 <?php foreach ($data['warnings'] as $w): ?>
-                  <li><?php echo htmlspecialchars((string)$w, ENT_QUOTES, 'UTF-8'); ?></li>
+                  <li><?php echo htmlspecialchars((string)$w, ENT_QUOTES, 'UTF-8'); ?>!</li>
                 <?php endforeach; ?>
               </ul>
             </div>
@@ -173,12 +173,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-badge-cell { justify-self: start; }
 .xmlcatag-reason { font-size: 12px; opacity: .8; white-space: nowrap; }
 .xmlcatag-warn {
-  background: #fff4e5;
-  border: 1px solid #f0b37e;
-  border-left: 4px solid #f0b37e;
-  color: #5c3d00;
-  padding: 10px 12px;
-  border-radius: 6px;
+  color: #b00020;
+  font-weight: 700;
+  font-size: 16px;
   margin: 10px 0;
 }
 .xmlcatag-warn strong { display: block; margin-bottom: 4px; }
