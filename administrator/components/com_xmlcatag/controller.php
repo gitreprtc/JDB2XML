@@ -68,13 +68,16 @@ class XmlcatagController extends BaseController
             $data = $preview[$selected];
         }
 
-        $rows = array_merge($data['categories'] ?? [], $data['tags'] ?? []);
+        $rows = $data['categories'] ?? [];
 
         // Blocking rule: any row marked as 'overgeslagen' (skipped) must be excluded explicitly
         foreach ($rows as $row) {
             $key = (string)($row['id'] ?? '');
             if (!empty($row['path'])) {
                 $key = (string)$row['path'];
+            }
+            if ($key === '') {
+                continue;
             }
             if (($row['action'] ?? '') === 'overgeslagen' && empty($exclude[$key])) {
                 $app->enqueueMessage('Import geblokkeerd: niet alle foutieve records zijn uitgesloten.', 'warning');
