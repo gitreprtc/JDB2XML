@@ -305,6 +305,7 @@ class XmlcatagImportHelper
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
+                'parent_id' => 1,
             ];
             $table->bind($data);
             $table->store();
