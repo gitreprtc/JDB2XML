@@ -207,6 +207,19 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
+            $parentId = 1;
+            if (strpos($path, '/') !== false) {
+                $parentPath = substr($path, 0, strrpos($path, '/'));
+                if ($parentPath !== '') {
+                    $parentQuery = $db->getQuery(true)
+                        ->select('id')
+                        ->from('#__categories')
+                        ->where('path=' . $db->quote($parentPath))
+                        ->where('extension=' . $db->quote($extension));
+                    $parentId = (int) $db->setQuery($parentQuery)->loadResult() ?: 1;
+                }
+            }
+
             $table = Table::getInstance('Category');
             $data = [
                 'title' => (string) ($node->title ?? $path),
@@ -222,10 +235,10 @@ class XmlcatagImportHelper
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
                 'note' => (string) ($node->note ?? ''),
-                'parent_id' => 1
+                'parent_id' => $parentId
             ];
             $table->bind($data);
-            $table->setLocation(1, 'last-child');
+            $table->setLocation($parentId, 'last-child');
             $table->store();
 
             $rollback['created']['categories'][] = (int) $table->id;
