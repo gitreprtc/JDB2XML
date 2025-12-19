@@ -150,9 +150,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
       <span>Zoek:</span>
       <input type="search" class="xmlcatag-search-input" placeholder="zoek..." aria-label="Zoek in preview">
     </label>
-    <button type="button" class="btn" id="xmlcatag-reset" data-reset-url="index.php?option=com_xmlcatag">
-      Reset preview
-    </button>
+    <span class="xmlcatag-filter-actions">
+      <button type="button" class="btn" id="xmlcatag-reset" data-reset-url="index.php?option=com_xmlcatag">
+        Reset preview
+      </button>
+    </span>
   </div>
 <?php endif; ?>
 
@@ -183,24 +185,22 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                   <?php echo $warningText; ?>
                 </div>
               <?php endif; ?>
-              <h4>Categorieën</h4>
-              <?php
-                if (!empty($tree)) {
-                    echo '<table class="xmlcatag-table">';
-                    echo '<thead><tr>';
-                    echo '<th class="xmlcatag-head-check">Actie</th>';
-                    echo '<th class="xmlcatag-head-title">Titel</th>';
-                    echo '<th>Pad</th>';
-                    echo '<th></th>';
-                    echo '<th></th>';
-                    echo '</tr></thead>';
-                    echo '<tbody>';
-                    renderTreeWithExclude($tree, $fileKey);
-                    echo '</tbody></table>';
-                } else {
-                    echo '<p>Geen categorieën om te tonen.</p>';
-                }
-              ?>
+              <?php if (!empty($tree)) : ?>
+                <h4>Categorieën</h4>
+                <?php
+                  echo '<table class="xmlcatag-table">';
+                  echo '<thead><tr>';
+                  echo '<th class="xmlcatag-head-check">Actie</th>';
+                  echo '<th class="xmlcatag-head-title">Titel</th>';
+                  echo '<th>Pad</th>';
+                  echo '<th></th>';
+                  echo '<th></th>';
+                  echo '</tr></thead>';
+                  echo '<tbody>';
+                  renderTreeWithExclude($tree, $fileKey);
+                  echo '</tbody></table>';
+                ?>
+              <?php endif; ?>
             </div>
 
             <div class="<?php echo $showTagsLeft ? 'xmlcatag-left' : 'xmlcatag-right'; ?>">
@@ -209,8 +209,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                   <?php echo $warningText; ?>
                 </div>
               <?php endif; ?>
-              <h4>Tags</h4>
               <?php if ($hasTags): ?>
+                <h4>Tags</h4>
                 <ul class="xmlcatag-tags">
                   <?php foreach ($data['tags'] as $tag): ?>
                     <?php $tagAction = (string)($tag['action'] ?? ''); ?>
@@ -284,6 +284,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-filter-item input { margin: 0; }
 .xmlcatag-search { flex: 1 1 220px; }
 .xmlcatag-search-input { width: 100%; max-width: 280px; }
+.xmlcatag-filter-actions { display:inline-flex; align-items:center; }
 .xmlcatag-new-icon { display:inline-flex; align-items:center; gap: 4px; color: #1b7f1b; font-weight: 700; font-size: 13px; }
 .xmlcatag-new-icon::before { content: "🟢"; font-size: 12px; }
 .xmlcatag-tag-row { display:flex; gap: 8px; align-items:center; margin: 6px 0; }
