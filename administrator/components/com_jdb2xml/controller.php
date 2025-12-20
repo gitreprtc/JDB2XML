@@ -372,6 +372,7 @@ class Jdb2xmlController extends BaseController
         $columns = $db->getTableColumns('#__scheduler_tasks');
         $now = Factory::getDate();
         $nowSql = $now->toSql();
+        $nullDate = $db->getNullDate();
         $userId = Factory::getApplication()->getIdentity()->id ?? 0;
 
         $paramsJson = json_encode($params, JSON_UNESCAPED_UNICODE);
@@ -402,6 +403,9 @@ class Jdb2xmlController extends BaseController
         if (isset($columns['state'])) {
             $fields['state'] = 1;
         }
+        if (isset($columns['enabled'])) {
+            $fields['enabled'] = 1;
+        }
         if (isset($columns['created'])) {
             $fields['created'] = $nowSql;
         }
@@ -412,13 +416,19 @@ class Jdb2xmlController extends BaseController
             $fields['checked_out'] = 0;
         }
         if (isset($columns['checked_out_time'])) {
-            $fields['checked_out_time'] = $nowSql;
+            $fields['checked_out_time'] = $nullDate;
         }
         if (isset($columns['modified'])) {
             $fields['modified'] = $nowSql;
         }
         if (isset($columns['modified_by'])) {
             $fields['modified_by'] = $userId;
+        }
+        if (isset($columns['locked'])) {
+            $fields['locked'] = 0;
+        }
+        if (isset($columns['last_execution'])) {
+            $fields['last_execution'] = $nullDate;
         }
         if (isset($columns['next_execution'])) {
             $intervalMinutes = 1;
