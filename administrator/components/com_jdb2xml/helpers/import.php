@@ -3,6 +3,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
@@ -24,8 +25,8 @@ class Jdb2xmlImportHelper
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'tags' => [], 'articles' => []],
-            'updated' => ['categories' => [], 'tags' => [], 'articles' => []],
+            'created' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -40,6 +41,7 @@ class Jdb2xmlImportHelper
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
         $createdCats = $changedCats = $skippedCats = 0;
+        $createdPhocaCats = $changedPhocaCats = $skippedPhocaCats = 0;
         $createdTags = $changedTags = $skippedTags = 0;
         $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
@@ -72,9 +74,11 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
+        $allowedPhocaCategorySet = null;
         $allowedArticleSet = null;
         $allowTags = true;
         $allowArticles = true;
+        $allowPhocaCategories = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -97,6 +101,19 @@ class Jdb2xmlImportHelper
                         continue;
                     }
                     $allowedArticleSet[$key] = true;
+                }
+
+                $allowPhocaCategories = !empty($previewData['phocaCategories']) && is_array($previewData['phocaCategories']);
+                if ($allowPhocaCategories) {
+                    $allowedPhocaCategorySet = [];
+                    $rows = $previewData['phocaCategories'] ?? [];
+                    foreach ($rows as $row) {
+                        $key = (string)($row['path'] ?? $row['id'] ?? '');
+                        if ($key === '' || isset($excludeSet[$key])) {
+                            continue;
+                        }
+                        $allowedPhocaCategorySet[$key] = true;
+                    }
                 }
             }
         }
@@ -133,6 +150,14 @@ class Jdb2xmlImportHelper
                         self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
+                    if ($allowPhocaCategories) {
+                        if (isset($xml->phocagallerycategories)) {
+                            self::importPhocaGalleryCategories($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                        } elseif ($xml->getName() === 'phocagallerycategories') {
+                            self::importPhocaGalleryCategories($db, $xml, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                        }
+                    }
+
                     if ($allowTags) {
                         if (isset($xml->tags)) {
                             self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
@@ -165,6 +190,7 @@ class Jdb2xmlImportHelper
             $msg = [];
             $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
             $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            $msg[] = 'Phoca Gallery categories: new=' . $createdPhocaCats . ', changed=' . $changedPhocaCats . ', skipped=' . $skippedPhocaCats;
             $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
             $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
             if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
@@ -282,6 +308,139 @@ class Jdb2xmlImportHelper
             }
 
             $rollback['created']['categories'][] = (int) $table->id;
+            $created++;
+        }
+    }
+
+    private static function importPhocaGalleryCategories(
+        $db,
+        $categories,
+        bool $dryRun,
+        array $exclude,
+        int &$created,
+        int &$changed,
+        int &$skipped,
+        array &$warnings,
+        array &$rollback,
+        ?array $allowed = null
+    ): void {
+        $columns = self::getTableColumns($db, '#__phocagallery_categories');
+        if (empty($columns)) {
+            $warnings[] = 'Phoca Gallery categories table missing.';
+            return;
+        }
+
+        foreach ($categories->category as $node) {
+            $id = (int) ($node->id ?? 0);
+            $alias = trim((string) ($node->alias ?? ''));
+            $key = $alias !== '' ? $alias : (string) $id;
+
+            if ($key === '') {
+                $skipped++;
+                $warnings[] = 'Phoca Gallery category without alias or id skipped.';
+                continue;
+            }
+            if (isset($exclude[$key])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$key])) { $skipped++; continue; }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__phocagallery_categories');
+            if ($alias !== '') {
+                $query->where('alias=' . $db->quote($alias));
+            } else {
+                $query->where('id=' . (int) $id);
+            }
+            $existing = $db->setQuery($query)->loadObject();
+
+            $title = (string) ($node->title ?? $alias);
+            $map = [
+                'title' => $title,
+                'alias' => $alias,
+                'description' => (string) ($node->description ?? ''),
+                'params' => (string) ($node->params ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+                'published' => (string) ($node->published ?? ''),
+                'access' => (string) ($node->access ?? ''),
+                'language' => (string) ($node->language ?? ''),
+                'parent_id' => (string) ($node->parent_id ?? ''),
+                'ordering' => (string) ($node->ordering ?? ''),
+            ];
+
+            if ($existing) {
+                $changedLocal = false;
+                $before = ['id' => (int)$existing->id, 'fields' => []];
+
+                if ($title !== '' && (string) ($existing->title ?? '') !== $title) {
+                    if (isset($columns['title'])) {
+                        $before['fields']['title'] = (string) ($existing->title ?? '');
+                        $existing->title = $title;
+                        $changedLocal = true;
+                    }
+                }
+
+                foreach ($map as $field => $value) {
+                    if ($value === '' || !isset($columns[$field])) {
+                        continue;
+                    }
+                    if (!property_exists($existing, $field)) {
+                        continue;
+                    }
+                    $dbVal = (string) ($existing->$field ?? '');
+                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                        $before['fields'][$field] = $dbVal;
+                        $existing->$field = $value;
+                        $changedLocal = true;
+                    }
+                }
+
+                if ($changedLocal) {
+                    if (!$dryRun) {
+                        $db->updateObject('#__phocagallery_categories', $existing, 'id');
+                        $rollback['updated']['phoca_categories'][] = $before;
+                    }
+                    $changed++;
+                } else {
+                    $skipped++;
+                }
+                continue;
+            }
+
+            if ($dryRun) { $created++; continue; }
+
+            $data = [];
+            $aliasValue = $alias !== '' ? $alias : OutputFilter::stringURLSafe($title);
+            $defaults = [
+                'title' => $title,
+                'alias' => $aliasValue,
+                'parent_id' => (int) ($node->parent_id ?? 0),
+                'published' => (int) ($node->published ?? 1),
+                'access' => (int) ($node->access ?? 1),
+                'language' => (string) ($node->language ?? '*'),
+                'ordering' => (int) ($node->ordering ?? 0),
+                'description' => (string) ($node->description ?? ''),
+                'params' => (string) ($node->params ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+            ];
+
+            foreach ($defaults as $field => $value) {
+                if (isset($columns[$field])) {
+                    $data[$field] = $value;
+                }
+            }
+
+            if ($data === []) {
+                $warnings[] = 'Phoca Gallery category skipped (no valid columns).';
+                $skipped++;
+                continue;
+            }
+
+            $obj = (object) $data;
+            if (!$db->insertObject('#__phocagallery_categories', $obj)) {
+                throw new RuntimeException('Phoca Gallery category save failed');
+            }
+
+            $rollback['created']['phoca_categories'][] = (int) ($obj->id ?? 0);
             $created++;
         }
     }
@@ -529,5 +688,16 @@ class Jdb2xmlImportHelper
     private static function buildArticleKey(string $alias, int $catid): string
     {
         return 'article:' . $catid . ':' . $alias;
+    }
+
+    private static function getTableColumns($db, string $table): array
+    {
+        try {
+            $columns = $db->getTableColumns($table, false);
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        return is_array($columns) ? $columns : [];
     }
 }

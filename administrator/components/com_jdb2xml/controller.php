@@ -74,6 +74,7 @@ class Jdb2xmlController extends BaseController
 
         $rows = array_merge(
             $data['categories'] ?? [],
+            $data['phocaCategories'] ?? [],
             $data['tags'] ?? [],
             $data['articles'] ?? []
         );

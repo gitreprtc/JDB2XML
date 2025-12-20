@@ -44,6 +44,9 @@ function collectActions(array $preview): array
         if (!empty($data['categoryTree']) && is_array($data['categoryTree'])) {
             collectActionsFromTree($data['categoryTree'], $actions);
         }
+        if (!empty($data['phocaCategoryTree']) && is_array($data['phocaCategoryTree'])) {
+            collectActionsFromTree($data['phocaCategoryTree'], $actions);
+        }
         if (!empty($data['tags']) && is_array($data['tags'])) {
             foreach ($data['tags'] as $tag) {
                 $action = (string)($tag['action'] ?? '');
@@ -183,9 +186,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
           <div class="jdb2xml-grid">
             <?php
               $tree = $data['categoryTree'] ?? [];
+              $phocaTree = $data['phocaCategoryTree'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
               $articleTree = $data['articleTree'] ?? [];
               $hasArticles = !empty($articleTree) && is_array($articleTree);
+              $hasPhoca = !empty($phocaTree) && is_array($phocaTree);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
                   $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
@@ -288,6 +293,24 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               </div>
             <?php endif; ?>
           </div>
+          <?php if ($hasPhoca): ?>
+            <div class="jdb2xml-phoca">
+              <h4>Phoca Gallery Categories</h4>
+              <?php
+                echo '<table class="jdb2xml-table">';
+                echo '<thead><tr>';
+                echo '<th class="jdb2xml-head-check">Action</th>';
+                echo '<th class="jdb2xml-head-title">Title</th>';
+                echo '<th>Alias/ID</th>';
+                echo '<th></th>';
+                echo '<th></th>';
+                echo '</tr></thead>';
+                echo '<tbody>';
+                renderTreeWithExclude($phocaTree, $fileKey);
+                echo '</tbody></table>';
+              ?>
+            </div>
+          <?php endif; ?>
           <?php if ($hasArticles): ?>
             <div class="jdb2xml-articles">
               <h4>Articles</h4>
@@ -357,6 +380,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   width: 100%;
 }
 .jdb2xml-articles { margin-top: 18px; }
+.jdb2xml-phoca { margin-top: 18px; }
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
