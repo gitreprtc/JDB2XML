@@ -120,6 +120,41 @@ class Jdb2xmlRollbackHelper
         ];
     }
 
+    public static function fetchEntities(string $type, array $ids): array
+    {
+        $type = $type === 'tags' ? 'tags' : 'categories';
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $db = Factory::getDbo();
+        if ($type === 'tags') {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'title', 'alias']))
+                ->from($db->quoteName('#__tags'))
+                ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
+        } else {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'title', 'path']))
+                ->from($db->quoteName('#__categories'))
+                ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
+        }
+
+        $db->setQuery($query);
+        $rows = $db->loadAssocList() ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['id']] = [
+                'title' => $row['title'] ?? '',
+                'path' => $type === 'tags' ? ($row['alias'] ?? '') : ($row['path'] ?? ''),
+            ];
+        }
+
+        return $map;
+    }
+
     private static function formatTimestamp(string $file): string
     {
         if (preg_match('/jdb2xml_rollback_(\d{8}_\d{6})\\.json$/', $file, $matches)) {
