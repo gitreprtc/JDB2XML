@@ -434,8 +434,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if (fileSelect) {
-    fetchFileList();
-    setInterval(fetchFileList, 2000);
+    var listInterval = null;
+
+    function startPolling() {
+      if (listInterval) return;
+      fetchFileList();
+      listInterval = window.setInterval(fetchFileList, 2000);
+    }
+
+    function stopPolling() {
+      if (!listInterval) return;
+      window.clearInterval(listInterval);
+      listInterval = null;
+    }
+
+    fileSelect.addEventListener("focus", startPolling);
+    fileSelect.addEventListener("mousedown", startPolling);
+    fileSelect.addEventListener("blur", stopPolling);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        stopPolling();
+      }
+    });
   }
 
   var filterContainer = document.querySelector("[data-jdb2xml-filters]");
