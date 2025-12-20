@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="task" method="upgrade">
+  <name>Task - JDB2XML</name>
+  <version>1.1.1</version>
+  <description>Scheduled tasks for JDB2XML import/export.</description>
+  <namespace path="src">Joomla\Plugin\Task\Jdb2xml</namespace>
+  <files>
+    <folder>src</folder>
+  </files>
+</extension>
