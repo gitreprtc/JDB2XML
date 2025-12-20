@@ -130,6 +130,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
   <div class="jdb2xml">
     <h2>Preview</h2>
+    <div class="jdb2xml-back">
+      <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=landing">Terug naar landingspagina</a>
+    </div>
 
 <div class="jdb2xml-filebar">
   <label for="selected_file"><strong>Bestand</strong></label>
@@ -287,6 +290,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
 <style>
 .jdb2xml { padding: 8px 0; }
+.jdb2xml-back { margin: 6px 0 12px; }
 .jdb2xml-file { margin: 14px 0; padding: 10px 0; border-top: 1px solid #eee; }
 .jdb2xml-grid { display:flex; gap: 18px; align-items:flex-start; }
 .jdb2xml-left { flex: 1 1 65%; min-width: 380px; }

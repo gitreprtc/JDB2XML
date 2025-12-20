@@ -12,6 +12,9 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 
 <div class="jdb2xml">
   <h2>Rollback</h2>
+  <div class="jdb2xml-back">
+    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=landing">Terug naar landingspagina</a>
+  </div>
   <div class="jdb2xml-grid">
     <div class="jdb2xml-left">
       <h4>Categorieën</h4>
@@ -52,6 +55,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 
 <style>
 .jdb2xml { padding: 8px 0; }
+.jdb2xml-back { margin: 6px 0 12px; }
 .jdb2xml-grid { display:flex; gap: 18px; align-items:flex-start; }
 .jdb2xml-left { flex: 1 1 65%; min-width: 380px; }
 .jdb2xml-right { flex: 0 0 35%; min-width: 280px; }
