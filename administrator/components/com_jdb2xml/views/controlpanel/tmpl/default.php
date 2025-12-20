@@ -216,7 +216,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                         $tagReason = (string)($tag['reason'] ?? '');
                         $tagSearch = strtolower(trim($tagTitle . ' ' . $tagAlias));
                       ?>
-                      <tr class="jdb2xml-tag-row"
+                      <tr class="jdb2xml-row"
                           data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>"
                           data-search="<?php echo htmlspecialchars($tagSearch, ENT_QUOTES, 'UTF-8'); ?>"
                           data-reason="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
@@ -309,7 +309,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                       $articleReason = (string)($article['reason'] ?? '');
                       $articleSearch = strtolower(trim($articleTitle . ' ' . $articleAlias . ' ' . $articleCatid));
                     ?>
-                    <tr class="jdb2xml-article-row"
+                    <tr class="jdb2xml-row"
                         data-action="<?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>"
                         data-search="<?php echo htmlspecialchars($articleSearch, ENT_QUOTES, 'UTF-8'); ?>"
                         data-reason="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
@@ -502,23 +502,6 @@ document.addEventListener("DOMContentLoaded", function () {
       row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
     });
 
-    document.querySelectorAll(".jdb2xml-tag-row[data-action]").forEach(function (row) {
-      var action = row.getAttribute("data-action") || "";
-      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
-      var actionMatch = checked.includes(action);
-      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
-      var shouldShow = actionMatch && searchMatch;
-      row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
-    });
-
-    document.querySelectorAll(".jdb2xml-article-row[data-action]").forEach(function (row) {
-      var action = row.getAttribute("data-action") || "";
-      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
-      var actionMatch = checked.includes(action);
-      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
-      var shouldShow = actionMatch && searchMatch;
-      row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
-    });
   }
 
   filterContainer.addEventListener("change", updateFilter);
