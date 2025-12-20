@@ -370,6 +370,8 @@ class Jdb2xmlController extends BaseController
     {
         $db = Factory::getDbo();
         $columns = $db->getTableColumns('#__scheduler_tasks');
+        $now = Factory::getDate()->toSql();
+        $userId = Factory::getApplication()->getIdentity()->id ?? 0;
 
         $paramsJson = json_encode($params, JSON_UNESCAPED_UNICODE);
         $rulesJson = json_encode($executionRules, JSON_UNESCAPED_UNICODE);
@@ -395,6 +397,24 @@ class Jdb2xmlController extends BaseController
         }
         if (isset($columns['state'])) {
             $fields['state'] = 1;
+        }
+        if (isset($columns['created'])) {
+            $fields['created'] = $now;
+        }
+        if (isset($columns['created_by'])) {
+            $fields['created_by'] = $userId;
+        }
+        if (isset($columns['checked_out'])) {
+            $fields['checked_out'] = 0;
+        }
+        if (isset($columns['checked_out_time'])) {
+            $fields['checked_out_time'] = $now;
+        }
+        if (isset($columns['modified'])) {
+            $fields['modified'] = $now;
+        }
+        if (isset($columns['modified_by'])) {
+            $fields['modified_by'] = $userId;
         }
 
         if ($taskId > 0) {
