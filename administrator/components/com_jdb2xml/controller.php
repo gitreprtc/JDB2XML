@@ -140,7 +140,7 @@ class Jdb2xmlController extends BaseController
     {
         $app = $this->getApplicationWithTokenCheck();
         $dir = JPATH_ROOT . '/media/com_jdb2xml/import';
-        $processedDir = $dir . '/processed';
+        $rejectedDir = $dir . '/rejected';
 
         $selected = basename((string) $app->input->getString('selected_file', (string) $app->getUserState('com_jdb2xml.selected_file', '')));
         if (!$selected) {
@@ -149,12 +149,12 @@ class Jdb2xmlController extends BaseController
             return;
         }
 
-        if (!is_dir($processedDir)) {
-            @mkdir($processedDir, 0755, true);
+        if (!is_dir($rejectedDir)) {
+            @mkdir($rejectedDir, 0755, true);
         }
 
         $source = $dir . '/' . $selected;
-        $dest = $processedDir . '/' . $selected;
+        $dest = $rejectedDir . '/' . $selected;
 
         if (!is_file($source)) {
             $app->enqueueMessage('Reject failed: file not found.', 'error');
@@ -163,14 +163,15 @@ class Jdb2xmlController extends BaseController
         }
 
         if (!@rename($source, $dest)) {
-            $app->enqueueMessage('Reject failed: unable to move file to processed.', 'error');
+            $app->enqueueMessage('Reject failed: unable to move file to rejected.', 'error');
             $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
             return;
         }
 
         $app->setUserState('com_jdb2xml.preview.' . $selected, null);
         $app->setUserState('com_jdb2xml.selected_file', '');
-        $app->enqueueMessage('File moved to processed: ' . $selected, 'message');
+        $app->enqueueMessage('File rejected by user.', 'message');
+        $app->enqueueMessage('File moved to rejected: ' . $selected, 'message');
         $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
     }
 
