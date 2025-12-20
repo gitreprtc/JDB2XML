@@ -134,6 +134,27 @@ class Jdb2xmlController extends BaseController
         $this->setRedirect('index.php?option=com_jdb2xml');
     }
 
+    public function listfiles()
+    {
+        $app = Factory::getApplication();
+
+        if (!Session::checkToken('get')) {
+            throw new RuntimeException(Text::_('JINVALID_TOKEN'), 403);
+        }
+
+        $dir = JPATH_ROOT . '/media/com_jdb2xml/import';
+        if (is_dir($dir)) {
+            clearstatcache(true, $dir);
+        }
+
+        $files = is_dir($dir) ? (glob($dir . '/*.xml', GLOB_NOSORT) ?: []) : [];
+        $names = array_map('basename', $files);
+
+        $app->setHeader('Content-Type', 'application/json', true);
+        echo json_encode(['files' => $names], JSON_UNESCAPED_SLASHES);
+        $app->close();
+    }
+
     public function rollbackapply()
     {
         require_once __DIR__ . '/helpers/rollback.php';

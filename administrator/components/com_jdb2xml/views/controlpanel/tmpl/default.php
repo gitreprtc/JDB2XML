@@ -4,6 +4,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
 
 $app = Factory::getApplication();
 $input = $app->input;
@@ -386,8 +387,61 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  var listToken = "<?php echo Session::getFormToken(); ?>";
+  var listUrl = "index.php?option=com_jdb2xml&task=listfiles&format=json&" + listToken + "=1";
+  var fileSelect = document.getElementById("selected_file");
+
+  function updateFileOptions(names) {
+    if (!fileSelect) return;
+    var previous = fileSelect.value;
+    var existing = Array.from(fileSelect.querySelectorAll("option")).map(function (opt) {
+      return opt.value;
+    });
+
+    var keep = new Set(names);
+    Array.from(fileSelect.querySelectorAll("option")).forEach(function (opt) {
+      if (opt.value === "") return;
+      if (!keep.has(opt.value)) {
+        opt.remove();
+      }
+    });
+
+    names.forEach(function (name) {
+      if (!existing.includes(name)) {
+        var option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        fileSelect.appendChild(option);
+      }
+    });
+
+    if (previous && keep.has(previous)) {
+      fileSelect.value = previous;
+    } else if (previous && !keep.has(previous)) {
+      fileSelect.value = "";
+    }
+  }
+
+  function fetchFileList() {
+    fetch(listUrl, { credentials: "same-origin" })
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        if (data && Array.isArray(data.files)) {
+          updateFileOptions(data.files);
+        }
+      })
+      .catch(function () {});
+  }
+
+  if (fileSelect) {
+    fetchFileList();
+    setInterval(fetchFileList, 2000);
+  }
+
   var filterContainer = document.querySelector("[data-jdb2xml-filters]");
-  if (!filterContainer) return;
+  if (!filterContainer) {
+    return;
+  }
 
   function updateFilter() {
     var searchInput = filterContainer.querySelector(".jdb2xml-search-input");
