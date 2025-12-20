@@ -7,7 +7,7 @@ use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
 
-class XmlcatagImportHelper
+class Jdb2xmlImportHelper
 {
     public static function runSingle(string $dir, string $selectedFile, bool $dryRun = false, array $exclude = []): string
     {
@@ -16,7 +16,7 @@ class XmlcatagImportHelper
 
     public static function run(string $dir, bool $dryRun = false, array $exclude = [], ?string $selectedFile = null): string
     {
-        $lock = JPATH_ADMINISTRATOR . '/cache/xmlcatag_import.lock';
+        $lock = JPATH_ADMINISTRATOR . '/cache/jdb2xml_import.lock';
         if (!is_dir(dirname($lock))) @mkdir(dirname($lock), 0755, true);
         if (file_exists($lock)) return 'Import afgebroken: lock actief.';
         @file_put_contents($lock, (string) time());
@@ -31,7 +31,7 @@ class XmlcatagImportHelper
         if (!$dryRun) {
             $logDir = JPATH_ADMINISTRATOR . '/logs';
             if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-            $rollbackFile = $logDir . '/xmlcatag_rollback_' . date('Ymd_His') . '.json';
+            $rollbackFile = $logDir . '/jdb2xml_rollback_' . date('Ymd_His') . '.json';
         }
 
         $processedDir = $dir . '/processed';
@@ -45,12 +45,12 @@ class XmlcatagImportHelper
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
-        $preview = $app->getUserState('com_xmlcatag.preview');
+        $preview = $app->getUserState('com_jdb2xml.preview');
         $planMap = [];
         if (is_array($preview)) {
             foreach ($preview as $fileKey => $data) {
                 if (isset($data['_plan']) && is_array($data['_plan'])) {
-                    $planMap[$fileKey] = XmlcatagImportPlan::fromArray($data['_plan']);
+                    $planMap[$fileKey] = Jdb2xmlImportPlan::fromArray($data['_plan']);
                 }
             }
         }
@@ -138,7 +138,7 @@ class XmlcatagImportHelper
             if (!$dryRun && $rollbackFile) {
                 file_put_contents($rollbackFile, json_encode($rollback, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
                 // store pointer to latest rollback file
-                file_put_contents(JPATH_ADMINISTRATOR . '/cache/xmlcatag_last_rollback.txt', basename($rollbackFile));
+                file_put_contents(JPATH_ADMINISTRATOR . '/cache/jdb2xml_last_rollback.txt', basename($rollbackFile));
             }
 
             $msg = [];

@@ -6,6 +6,6 @@ use Joomla\CMS\Factory;
 
 require_once __DIR__ . '/controller.php';
 
-$controller = new XmlcatagController();
+$controller = new Jdb2xmlController();
 $controller->execute(Factory::getApplication()->getInput()->get('task'));
 $controller->redirect();

@@ -4,12 +4,12 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 
-class XmlcatagRollbackHelper
+class Jdb2xmlRollbackHelper
 {
     public static function listLogsByType(string $type): array
     {
         $logDir = JPATH_ADMINISTRATOR . '/logs';
-        $files = glob($logDir . '/xmlcatag_rollback_*.json') ?: [];
+        $files = glob($logDir . '/jdb2xml_rollback_*.json') ?: [];
         rsort($files);
 
         $list = [];
@@ -37,7 +37,7 @@ class XmlcatagRollbackHelper
         }
 
         $logDir = JPATH_ADMINISTRATOR . '/logs';
-        $files = glob($logDir . '/xmlcatag_rollback_*.json') ?: [];
+        $files = glob($logDir . '/jdb2xml_rollback_*.json') ?: [];
         rsort($files);
 
         $selectedPath = $logDir . '/' . $untilFile;

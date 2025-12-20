@@ -6,7 +6,7 @@ use Joomla\CMS\Factory;
 
 require_once __DIR__ . '/ImportPlan.php';
 
-class XmlcatagImportPreviewHelper
+class Jdb2xmlImportPreviewHelper
 {
     public static function run(string $dir, ?string $selectedFile = null): array
     {

@@ -4,7 +4,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 
-class XmlcatagExportHelper
+class Jdb2xmlExportHelper
 {
     public static function run(string $dir): string
     {

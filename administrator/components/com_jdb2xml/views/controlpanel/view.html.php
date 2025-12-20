@@ -6,7 +6,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\View\HtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 
-class XmlcatagViewControlpanel extends HtmlView
+class Jdb2xmlViewControlpanel extends HtmlView
 {
     public function display($tpl = null)
     {
@@ -19,8 +19,8 @@ class XmlcatagViewControlpanel extends HtmlView
         // C2: mixed-state visualisation (client-side only)
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('
-            .xmlcatag-node.mixed{background:transparent;border-left:0;padding-left:0;}
-            .xmlcatag-node.mixed::after{content:"gemengd";font-size:inherit;color:inherit;margin-left:8px;}
+            .jdb2xml-node.mixed{background:transparent;border-left:0;padding-left:0;}
+            .jdb2xml-node.mixed::after{content:"gemengd";font-size:inherit;color:inherit;margin-left:8px;}
             #toolbar-preview .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-import .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-export .btn{background:#1976d2;border-color:#1976d2;color:#fff;}
@@ -31,7 +31,7 @@ class XmlcatagViewControlpanel extends HtmlView
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
                 function updateMixedStates(){
-                    var rows = Array.from(document.querySelectorAll(".xmlcatag-row[data-depth]"));
+                    var rows = Array.from(document.querySelectorAll(".jdb2xml-row[data-depth]"));
                     rows.forEach(function(row, index){
                         var depth = parseInt(row.getAttribute("data-depth") || "0", 10);
                         var childRows = [];
@@ -48,7 +48,7 @@ class XmlcatagViewControlpanel extends HtmlView
                             var cb = child.querySelector("input[type=\"checkbox\"]");
                             if(cb && cb.checked) excluded++;
                         });
-                        var node = row.querySelector(".xmlcatag-node");
+                        var node = row.querySelector(".jdb2xml-node");
                         if(!node) return;
                         node.classList.remove("mixed");
                         if(excluded > 0 && excluded < childRows.length){
@@ -57,7 +57,7 @@ class XmlcatagViewControlpanel extends HtmlView
                     });
                 }
                 document.addEventListener("change", function(e){
-                    if(e.target && e.target.matches(".xmlcatag-table input[type=\"checkbox\"]")){
+                    if(e.target && e.target.matches(".jdb2xml-table input[type=\"checkbox\"]")){
                         updateMixedStates();
                     }
                 });
@@ -71,15 +71,15 @@ class XmlcatagViewControlpanel extends HtmlView
                 var t = e.target;
                 if (!t || !t.classList) return;
         
-                if (t.classList.contains("xmlcatag-exclude-all") || t.classList.contains("xmlcatag-include-all")) {
+                if (t.classList.contains("jdb2xml-exclude-all") || t.classList.contains("jdb2xml-include-all")) {
                     e.preventDefault();
                     var row = t.closest("tr");
                     if (!row) return;
-                    var rows = Array.from(document.querySelectorAll(".xmlcatag-row[data-depth]"));
+                    var rows = Array.from(document.querySelectorAll(".jdb2xml-row[data-depth]"));
                     var index = rows.indexOf(row);
                     if (index === -1) return;
                     var depth = parseInt(row.getAttribute("data-depth") || "0", 10);
-                    var exclude = t.classList.contains("xmlcatag-exclude-all");
+                    var exclude = t.classList.contains("jdb2xml-exclude-all");
                     row.querySelectorAll("input[type=\"checkbox\"]").forEach(function(cb){
                         cb.checked = exclude ? true : false;
                         cb.dispatchEvent(new Event("change", {bubbles:true}));
