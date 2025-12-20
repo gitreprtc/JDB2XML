@@ -12,9 +12,6 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 
 <div class="jdb2xml">
   <h2>Rollback</h2>
-  <div class="jdb2xml-back">
-    <a class="btn btn-success" href="index.php?option=com_jdb2xml&view=landing">Hoofdmenu</a>
-  </div>
   <div class="jdb2xml-section">
     <h3>Categorieën</h3>
     <?php if (empty($rollbackCategories)): ?>
@@ -264,13 +261,12 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 
 <style>
 .jdb2xml { padding: 8px 0; }
-.jdb2xml-back { margin: 6px 0 12px; }
 .jdb2xml-section { margin-bottom: 18px; }
 .jdb2xml-rollback-item { margin: 10px 0; border: 1px solid #e5e5e5; padding: 8px 12px; border-radius: 6px; background: #fff; }
 .jdb2xml-rollback-item summary { cursor: pointer; font-weight: 600; }
 .jdb2xml-rollback-form { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 .jdb2xml-rollback-fields { color: #666; font-size: 12px; margin-top: 4px; }
-.jdb2xml-rollback-status { color: #2e7d32; font-weight: 600; font-size: 12px; }
+.jdb2xml-rollback-status { color: #000; font-weight: 600; font-size: 12px; }
 .jdb2xml-empty { color: #666; font-style: italic; }
 .jdb2xml-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 .jdb2xml-table th, .jdb2xml-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }

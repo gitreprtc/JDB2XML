@@ -25,6 +25,8 @@ class Jdb2xmlViewControlpanel extends HtmlView
             #toolbar-import .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-resetpreview .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
             #toolbar-refreshsftp .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
+            #toolbar-home{margin-left:auto;}
+            #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
         ');
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
@@ -107,5 +109,6 @@ class Jdb2xmlViewControlpanel extends HtmlView
         ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('import', 'upload', 'upload', 'Import', false);
         ToolbarHelper::custom('refreshsftp', 'refresh', 'refresh', 'Refresh SFTP', false);
+        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Hoofdmenu', 'home');
     }
 }
