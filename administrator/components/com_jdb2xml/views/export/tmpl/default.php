@@ -6,7 +6,7 @@ defined('_JEXEC') or die;
 <div class="jdb2xml-export">
   <h2>Export</h2>
   <div class="jdb2xml-back">
-    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=landing">Terug naar landingspagina</a>
+    <a class="btn btn-success" href="index.php?option=com_jdb2xml&view=landing">Hoofdmenu</a>
   </div>
   <p>De exportpagina is klaar voor gebruik. De inhoud vullen we later.</p>
 </div>

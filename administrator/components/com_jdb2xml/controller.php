@@ -161,10 +161,16 @@ class Jdb2xmlController extends BaseController
 
         $type = $app->input->getCmd('rollback_type', 'categories');
         $file = basename((string) $app->input->getString('rollback_file', ''));
+        $items = $app->input->get('rollback_items', [], 'array');
+        $createdIds = isset($items['created']) && is_array($items['created']) ? $items['created'] : [];
+        $updatedIds = isset($items['updated']) && is_array($items['updated']) ? $items['updated'] : [];
 
         try {
-            $result = Jdb2xmlRollbackHelper::apply($type, $file);
-            $app->enqueueMessage($result, 'message');
+            $result = Jdb2xmlRollbackHelper::apply($type, $file, $createdIds, $updatedIds);
+            $app->enqueueMessage($result['message'], 'message');
+            if (!empty($result['warning'])) {
+                $app->enqueueMessage($result['warning'], 'warning');
+            }
         } catch (Throwable $e) {
             $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
         }

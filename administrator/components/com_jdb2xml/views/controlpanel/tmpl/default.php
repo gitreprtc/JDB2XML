@@ -131,7 +131,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   <div class="jdb2xml">
     <h2>Preview</h2>
     <div class="jdb2xml-back">
-      <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=landing">Terug naar landingspagina</a>
+      <a class="btn btn-success" href="index.php?option=com_jdb2xml&view=landing">Hoofdmenu</a>
     </div>
 
 <div class="jdb2xml-filebar">
