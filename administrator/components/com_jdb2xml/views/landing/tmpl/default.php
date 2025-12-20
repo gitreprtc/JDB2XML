@@ -8,11 +8,11 @@ defined('_JEXEC') or die;
   <p>Welcome! This is the landing page. We will fill the content later.</p>
 
   <h3>Set-Up</h3>
-  <p>Configure your cron scheduler to call Joomla’s scheduler runner. Use your site base URL:</p>
+  <p>Configure your cron scheduler to call Joomla’s CLI scheduler runner (recommended):</p>
   <ul>
-    <li><strong>Scheduler runner</strong>: <code>https://YOUR-DOMAIN/administrator/index.php?option=com_scheduler&amp;task=run&amp;interval=1</code></li>
+    <li><strong>Scheduler runner</strong>: <code>/usr/bin/php /path/to/joomla/administrator/cli/joomla.php scheduler:run</code></li>
   </ul>
-  <p>Set the cron interval to 1 minute so the scheduled tasks can run at the configured minute-based cadence. Import and export schedules use the same runner URL.</p>
+  <p>Set the cron interval to 1 minute so the scheduled tasks can run at the configured minute-based cadence. Import and export schedules use the same runner command.</p>
 
   <div class="jdb2xml-landing-links">
     <a class="btn btn-primary" href="index.php?option=com_jdb2xml&view=controlpanel">Manual Import</a>
