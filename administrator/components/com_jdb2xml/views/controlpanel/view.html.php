@@ -25,7 +25,6 @@ class Jdb2xmlViewControlpanel extends HtmlView
             #toolbar-import .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-resetpreview .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
             #toolbar-refreshsftp .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
-            #toolbar-home{margin-left:auto;}
             #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-rejectimport .btn{background:#c0392b;border-color:#c0392b;color:#fff;}
         ');
@@ -105,12 +104,12 @@ class Jdb2xmlViewControlpanel extends HtmlView
     {
         ToolbarHelper::title('JDB2XML', 'stack');
 
+        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
         // These buttons submit the adminForm with the given task.
         ToolbarHelper::custom('preview', 'search', 'search', 'Preview', false);
         ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('import', 'upload', 'upload', 'Import', false);
         ToolbarHelper::custom('rejectimport', 'cancel', 'cancel', 'Reject', false);
         ToolbarHelper::custom('refreshsftp', 'refresh', 'refresh', 'Refresh SFTP', false);
-        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
     }
 }

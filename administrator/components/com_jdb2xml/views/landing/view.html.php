@@ -12,7 +12,6 @@ class Jdb2xmlViewLanding extends HtmlView
     {
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('
-            #toolbar-home{margin-left:auto;}
             #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
         ');
         $this->addToolbar();
