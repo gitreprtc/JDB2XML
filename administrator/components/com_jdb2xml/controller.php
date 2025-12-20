@@ -277,11 +277,11 @@ class Jdb2xmlController extends BaseController
         $schedule = [];
         foreach ($validWeekdays as $day) {
             $dayInput = $scheduleInput[$day] ?? [];
-            $interval = max(1, (int) ($dayInput['interval_hours'] ?? 24));
+            $interval = max(1, (int) ($dayInput['interval_minutes'] ?? 60));
             $timeFrom = (string) ($dayInput['time_from'] ?? '00:00');
             $timeTo = (string) ($dayInput['time_to'] ?? '23:59');
             $schedule[$day] = [
-                'interval_hours' => $interval,
+                'interval_minutes' => $interval,
                 'time_from' => $timeFrom,
                 'time_to' => $timeTo,
             ];
@@ -301,6 +301,57 @@ class Jdb2xmlController extends BaseController
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function saveimportschedule()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $scheduleInput = $app->input->get('import_schedule', [], 'array');
+        $validWeekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        $schedule = [];
+        foreach ($validWeekdays as $day) {
+            $dayInput = $scheduleInput[$day] ?? [];
+            $interval = max(1, (int) ($dayInput['interval_minutes'] ?? 60));
+            $timeFrom = (string) ($dayInput['time_from'] ?? '00:00');
+            $timeTo = (string) ($dayInput['time_to'] ?? '23:59');
+            $schedule[$day] = [
+                'interval_minutes' => $interval,
+                'time_from' => $timeFrom,
+                'time_to' => $timeTo,
+            ];
+        }
+
+        $component = ComponentHelper::getComponent('com_jdb2xml');
+        $table = Table::getInstance('extension');
+        $table->load($component->id);
+        $params = new Registry($table->params);
+        $params->set('import_schedule', $schedule);
+        $table->params = $params->toString();
+
+        if (!$table->check() || !$table->store()) {
+            $app->enqueueMessage('Failed to save import schedule settings.', 'error');
+        } else {
+            $app->enqueueMessage('Import schedule settings saved.', 'message');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=importautomatic');
+    }
+
+    public function runautomaticimport()
+    {
+        require_once __DIR__ . '/helpers/automatic_import.php';
+        $app = $this->getApplicationWithTokenCheck();
+
+        $result = Jdb2xmlAutomaticImportHelper::run(JPATH_ROOT . '/media/com_jdb2xml/import');
+        Jdb2xmlAutomaticImportHelper::logBatch($result);
+
+        if (!empty($result['errors'])) {
+            $app->enqueueMessage('Automatic import finished with errors.', 'warning');
+        } else {
+            $app->enqueueMessage('Automatic import completed.', 'message');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=importautomatic');
     }
 
     protected function getApplicationWithTokenCheck(): CMSApplicationInterface

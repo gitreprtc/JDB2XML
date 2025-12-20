@@ -51,7 +51,7 @@ defined('_JEXEC') or die;
       <div class="jdb2xml-export-schedule">
         <div class="jdb2xml-export-schedule-row jdb2xml-export-schedule-head">
           <span>Weekday</span>
-          <span>Every (hours)</span>
+          <span>Every (minutes)</span>
           <span>From</span>
           <span>To</span>
         </div>
@@ -59,14 +59,16 @@ defined('_JEXEC') or die;
           <?php
             $dayRaw = $schedule[$key] ?? [];
             $day = is_object($dayRaw) ? (array) $dayRaw : (array) $dayRaw;
-            $interval = (int) ($day['interval_hours'] ?? 24);
+            $interval = isset($day['interval_minutes'])
+              ? (int) $day['interval_minutes']
+              : (int) (($day['interval_hours'] ?? 1) * 60);
             $timeFrom = (string) ($day['time_from'] ?? '00:00');
             $timeTo = (string) ($day['time_to'] ?? '23:59');
           ?>
           <div class="jdb2xml-export-schedule-row">
             <span class="jdb2xml-export-schedule-day"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></span>
             <input type="number"
-                   name="export_schedule[<?php echo $key; ?>][interval_hours]"
+                   name="export_schedule[<?php echo $key; ?>][interval_minutes]"
                    min="1"
                    value="<?php echo (int) $interval; ?>">
             <input type="time"
@@ -81,7 +83,7 @@ defined('_JEXEC') or die;
       <button type="submit" class="btn btn-success">Save schedule</button>
     </form>
     <p class="jdb2xml-export-note">
-      The schedule runs on the selected weekday every N hours within the time window. The start time is calculated from the "From" value.
+      The schedule runs on each weekday every N minutes within the time window. The start time is calculated from the "From" value.
     </p>
   </div>
 

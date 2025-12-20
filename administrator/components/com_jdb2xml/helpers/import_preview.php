@@ -177,7 +177,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'aanvullen',
+                    'action' => 'update',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -247,7 +247,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'aanvullen',
+                    'action' => 'update',
                     'reason' => '',
                     'exclude' => false
                 ];

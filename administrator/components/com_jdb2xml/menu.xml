@@ -6,7 +6,10 @@
       JDB2XML
     </menu>
     <menu link="index.php?option=com_jdb2xml&view=controlpanel" view="controlpanel">
-      Import
+      Manual Import
+    </menu>
+    <menu link="index.php?option=com_jdb2xml&view=importautomatic" view="importautomatic">
+      Automatic Import
     </menu>
     <menu link="index.php?option=com_jdb2xml&view=export" view="export">
       Export
