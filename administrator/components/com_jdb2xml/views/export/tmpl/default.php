@@ -33,7 +33,8 @@ defined('_JEXEC') or die;
   <div class="jdb2xml-export-section">
     <h3>Automatic export schedule</h3>
     <?php
-      $schedule = (array) $this->params->get('export_schedule', []);
+      $rawSchedule = $this->params->get('export_schedule', []);
+      $schedule = is_object($rawSchedule) ? (array) $rawSchedule : (array) $rawSchedule;
       $weekdays = [
         'monday' => 'Monday',
         'tuesday' => 'Tuesday',
@@ -56,7 +57,8 @@ defined('_JEXEC') or die;
         </div>
         <?php foreach ($weekdays as $key => $label): ?>
           <?php
-            $day = $schedule[$key] ?? [];
+            $dayRaw = $schedule[$key] ?? [];
+            $day = is_object($dayRaw) ? (array) $dayRaw : (array) $dayRaw;
             $interval = (int) ($day['interval_hours'] ?? 24);
             $timeFrom = (string) ($day['time_from'] ?? '00:00');
             $timeTo = (string) ($day['time_to'] ?? '23:59');
