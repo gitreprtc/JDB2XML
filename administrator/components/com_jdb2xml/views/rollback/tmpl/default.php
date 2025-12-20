@@ -262,7 +262,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 <style>
 .jdb2xml { padding: 8px 0; }
 .jdb2xml-section { margin-bottom: 18px; }
-.jdb2xml-rollback-item { margin: 10px 0; border: 1px solid #e5e5e5; padding: 8px 12px; border-radius: 6px; background: #fff; }
+.jdb2xml-rollback-item { margin: 10px 0; border: 1px solid #e5e5e5; padding: 8px 12px; border-radius: 6px; }
 .jdb2xml-rollback-item summary { cursor: pointer; font-weight: 600; }
 .jdb2xml-rollback-form { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 .jdb2xml-rollback-fields { color: #666; font-size: 12px; margin-top: 4px; }

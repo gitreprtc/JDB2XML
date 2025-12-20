@@ -22,7 +22,6 @@ class Jdb2xmlViewRollback extends HtmlView
     protected function addToolbar(): void
     {
         ToolbarHelper::title('JDB2XML - Rollback', 'stack');
-        ToolbarHelper::custom('rollback', 'undo', 'undo', 'Rollback', false);
         ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Hoofdmenu', 'home');
     }
 }
