@@ -1,4 +1,5 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
@@ -329,6 +330,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     <?php endif; ?>
   </div>
 </form>
+<div class="xmlcatag-footer">Copyright Robin Colbers.</div>
 
 <style>
 .xmlcatag { padding: 8px 0; }
@@ -377,6 +379,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .xmlcatag-tags li { margin: 6px 0; }
 .xmlcatag-rollback-form { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .xmlcatag-rollback-select { min-width: 240px; }
+.xmlcatag-footer { margin-top: 16px; font-size: 12px; color: #666; }
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {

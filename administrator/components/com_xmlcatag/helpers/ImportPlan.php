@@ -1,4 +1,5 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 /**

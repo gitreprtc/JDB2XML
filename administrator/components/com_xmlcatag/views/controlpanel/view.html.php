@@ -1,4 +1,5 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
@@ -101,7 +102,7 @@ class XmlcatagViewControlpanel extends HtmlView
 
     protected function addToolbar(): void
     {
-        ToolbarHelper::title('XML Cat/Tag', 'stack');
+        ToolbarHelper::title('JDB2XML', 'stack');
 
         // These buttons submit the adminForm with the given task.
         ToolbarHelper::custom('preview', 'search', 'search', 'Preview', false);

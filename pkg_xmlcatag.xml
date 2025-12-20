@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright Robin Colbers. -->
 <extension type="package" version="6.0" method="upgrade">
-  <name>PKG_XMLCATAG</name>
+  <name>JDB2XML</name>
   <packagename>xmlcatag</packagename>
   <version>1.1.1-b1b2</version>
   <files>
