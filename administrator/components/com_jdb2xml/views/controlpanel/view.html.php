@@ -30,8 +30,8 @@ class Jdb2xmlViewControlpanel extends HtmlView
         ');
         $doc->addScriptDeclaration('
             document.addEventListener("DOMContentLoaded", function () {
-                function updateMixedStates(){
-                    var rows = Array.from(document.querySelectorAll(".jdb2xml-row[data-depth]"));
+                function updateMixedStates(table){
+                    var rows = Array.from(table.querySelectorAll(".jdb2xml-row[data-depth]"));
                     rows.forEach(function(row, index){
                         var depth = parseInt(row.getAttribute("data-depth") || "0", 10);
                         var childRows = [];
@@ -58,10 +58,15 @@ class Jdb2xmlViewControlpanel extends HtmlView
                 }
                 document.addEventListener("change", function(e){
                     if(e.target && e.target.matches(".jdb2xml-table input[type=\"checkbox\"]")){
-                        updateMixedStates();
+                        var table = e.target.closest(".jdb2xml-table");
+                        if (table) {
+                            updateMixedStates(table);
+                        }
                     }
                 });
-                updateMixedStates();
+                document.querySelectorAll(".jdb2xml-table").forEach(function(table){
+                    updateMixedStates(table);
+                });
             });
         ');
 
@@ -75,7 +80,9 @@ class Jdb2xmlViewControlpanel extends HtmlView
                     e.preventDefault();
                     var row = t.closest("tr");
                     if (!row) return;
-                    var rows = Array.from(document.querySelectorAll(".jdb2xml-row[data-depth]"));
+                    var table = row.closest(".jdb2xml-table");
+                    if (!table) return;
+                    var rows = Array.from(table.querySelectorAll(".jdb2xml-row[data-depth]"));
                     var index = rows.indexOf(row);
                     if (index === -1) return;
                     var depth = parseInt(row.getAttribute("data-depth") || "0", 10);

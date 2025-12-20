@@ -45,7 +45,7 @@ class Jdb2xmlAutomaticImportHelper
                 }
 
                 $hasAction = false;
-                foreach (['categories', 'tags'] as $type) {
+                foreach (['categories', 'tags', 'articles'] as $type) {
                     foreach (($data[$type] ?? []) as $row) {
                         $action = (string)($row['action'] ?? '');
                         if ($action !== '' && $action !== 'skipped') {

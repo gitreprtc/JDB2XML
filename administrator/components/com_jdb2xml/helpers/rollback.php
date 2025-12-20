@@ -5,6 +5,8 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use DateTime;
 
+require_once __DIR__ . '/log.php';
+
 class Jdb2xmlRollbackHelper
 {
     public static function listLogsByType(string $type): array
@@ -40,7 +42,7 @@ class Jdb2xmlRollbackHelper
 
     public static function apply(string $type, string $targetFile, array $createdIds, array $updatedIds): array
     {
-        $type = $type === 'tags' ? 'tags' : 'categories';
+        $type = in_array($type, ['tags', 'categories', 'articles'], true) ? $type : 'categories';
         if ($targetFile === '') {
             return ['message' => 'No rollback log selected.', 'warning' => null];
         }
@@ -71,8 +73,15 @@ class Jdb2xmlRollbackHelper
             $warning = self::buildWarningMessage($type, $laterUpdates);
         }
 
-        $table = $type === 'tags' ? '#__tags' : '#__categories';
+        if ($type === 'tags') {
+            $table = '#__tags';
+        } elseif ($type === 'articles') {
+            $table = '#__content';
+        } else {
+            $table = '#__categories';
+        }
 
+        $laterEntities = self::fetchEntities($type, array_column($laterUpdates, 'id'));
         foreach ($laterUpdates as $entry) {
             $obj = (object) ['id' => (int)$entry['id']];
             foreach (($entry['fields'] ?? []) as $field => $prev) {
@@ -80,12 +89,21 @@ class Jdb2xmlRollbackHelper
             }
             $db->updateObject($table, $obj, 'id');
             $reverted++;
+            $entity = $laterEntities[(int) $entry['id']] ?? ['title' => '', 'path' => ''];
+            Jdb2xmlLogHelper::logRollback(
+                $type,
+                'rollback-updated',
+                (string) ($entity['path'] ?? (string) $entry['id']),
+                (string) ($entity['title'] ?? ''),
+                array_keys($entry['fields'] ?? [])
+            );
         }
 
         $selectedData = json_decode(file_get_contents($selectedPath), true);
         $selectedData = is_array($selectedData) ? $selectedData : [];
         $selectedUpdates = $selectedData['updated'][$type] ?? [];
 
+        $rollbackUpdateEntities = self::fetchEntities($type, $updatedIds);
         foreach ($selectedUpdates as $u) {
             $id = (int)($u['id'] ?? 0);
             if (!in_array($id, $updatedIds, true)) {
@@ -97,11 +115,29 @@ class Jdb2xmlRollbackHelper
             }
             $db->updateObject($table, $obj, 'id');
             $reverted++;
+
+            $entity = $rollbackUpdateEntities[$id] ?? ['title' => '', 'path' => ''];
+            Jdb2xmlLogHelper::logRollback(
+                $type,
+                'rollback-updated',
+                (string) ($entity['path'] ?? (string) $id),
+                (string) ($entity['title'] ?? ''),
+                array_keys($u['fields'] ?? [])
+            );
         }
 
+        $rollbackCreateEntities = self::fetchEntities($type, $createdIds);
         foreach ($createdIds as $id) {
+            $entity = $rollbackCreateEntities[(int) $id] ?? ['title' => '', 'path' => ''];
             $db->setQuery($db->getQuery(true)->delete($table)->where('id=' . (int)$id))->execute();
             $deleted++;
+            Jdb2xmlLogHelper::logRollback(
+                $type,
+                'rollback-created',
+                (string) ($entity['path'] ?? (string) $id),
+                (string) ($entity['title'] ?? ''),
+                []
+            );
         }
 
         self::markRolledBack($selectedPath, $type, $createdIds, $updatedIds);
@@ -122,7 +158,7 @@ class Jdb2xmlRollbackHelper
 
     public static function fetchEntities(string $type, array $ids): array
     {
-        $type = $type === 'tags' ? 'tags' : 'categories';
+        $type = in_array($type, ['tags', 'categories', 'articles'], true) ? $type : 'categories';
         $ids = array_values(array_unique(array_map('intval', $ids)));
         if (empty($ids)) {
             return [];
@@ -133,6 +169,11 @@ class Jdb2xmlRollbackHelper
             $query = $db->getQuery(true)
                 ->select($db->quoteName(['id', 'title', 'alias']))
                 ->from($db->quoteName('#__tags'))
+                ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
+        } elseif ($type === 'articles') {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'title', 'alias']))
+                ->from($db->quoteName('#__content'))
                 ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
         } else {
             $query = $db->getQuery(true)
@@ -148,7 +189,7 @@ class Jdb2xmlRollbackHelper
         foreach ($rows as $row) {
             $map[(int)$row['id']] = [
                 'title' => $row['title'] ?? '',
-                'path' => $type === 'tags' ? ($row['alias'] ?? '') : ($row['path'] ?? ''),
+                'path' => $type === 'tags' || $type === 'articles' ? ($row['alias'] ?? '') : ($row['path'] ?? ''),
             ];
         }
 

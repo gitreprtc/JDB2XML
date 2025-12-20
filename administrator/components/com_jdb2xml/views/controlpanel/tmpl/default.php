@@ -6,6 +6,8 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
 
+require_once __DIR__ . '/../../../helpers/log.php';
+
 $app = Factory::getApplication();
 $input = $app->input;
 
@@ -23,6 +25,13 @@ $preview = null;
 if ($showPreview && $selected) {
     $preview = $app->getUserState('com_jdb2xml.preview.' . $selected);
 }
+
+$changeCategories = Jdb2xmlLogHelper::getChangesByType('categories');
+$changeTags = Jdb2xmlLogHelper::getChangesByType('tags');
+$changeArticles = Jdb2xmlLogHelper::getChangesByType('articles');
+$rollbackCategories = Jdb2xmlLogHelper::getRollbacksByType('categories');
+$rollbackTags = Jdb2xmlLogHelper::getRollbacksByType('tags');
+$rollbackArticles = Jdb2xmlLogHelper::getRollbacksByType('articles');
 
 function collectActionsFromTree(array $nodes, array &$actions): void
 {
@@ -52,6 +61,14 @@ function collectActions(array $preview): array
                 }
             }
         }
+        if (!empty($data['articles']) && is_array($data['articles'])) {
+            foreach ($data['articles'] as $article) {
+                $action = (string)($article['action'] ?? '');
+                if ($action !== '') {
+                    $actions[$action] = true;
+                }
+            }
+        }
     }
     return array_keys($actions);
 }
@@ -67,22 +84,24 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     foreach ($nodes as $n) {
         $title = (string)($n['title'] ?? '-');
         $path  = (string)($n['path'] ?? $n['id'] ?? '');
+        $excludeKey = (string)($n['exclude_key'] ?? $path);
+        $pathDisplay = (string)($n['path_display'] ?? $path);
 
         $action = (string)($n['action'] ?? '');
         $reason = (string)($n['reason'] ?? '');
 
         $prefix = $level > 0 ? str_repeat('-', $level) . ' ' : '';
-        $search = strtolower(trim($title . ' ' . $path));
+        $search = strtolower(trim($title . ' ' . $pathDisplay));
         $actionAttr = $action !== '' ? ' data-action="' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '"' : '';
         echo '<tr class="jdb2xml-row" data-depth="' . (int)$level . '"' . $actionAttr
             . ' data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"'
             . ' data-reason="' . htmlspecialchars($reason, ENT_QUOTES, 'UTF-8') . '">';
 
         echo '<td class="jdb2xml-cell jdb2xml-check">';
-        if ($path !== '') {
+        if ($excludeKey !== '') {
             $checked = !empty($n['exclude']) ? ' checked' : '';
             echo '<label class="jdb2xml-exclude">';
-            echo '<input class="jdb2xml-exclude-cb" type="checkbox" name="exclude[' . htmlspecialchars($file, ENT_QUOTES, 'UTF-8') . '][' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . ']" value="1"' . $checked . '>';
+            echo '<input class="jdb2xml-exclude-cb" type="checkbox" name="exclude[' . htmlspecialchars($file, ENT_QUOTES, 'UTF-8') . '][' . htmlspecialchars($excludeKey, ENT_QUOTES, 'UTF-8') . ']" value="1"' . $checked . '>';
             echo '<span>Exclude</span>';
             echo '</label>';
         }
@@ -97,8 +116,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         echo '</td>';
 
         echo '<td class="jdb2xml-cell jdb2xml-path">';
-        if ($path !== '') {
-            echo '<code>' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
+        if ($pathDisplay !== '') {
+            echo '<code>' . htmlspecialchars($pathDisplay, ENT_QUOTES, 'UTF-8') . '</code>';
         }
         echo '</td>';
 
@@ -122,6 +141,35 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         }
     }
 }
+
+function renderLogTable(string $heading, array $entries): void
+{
+    echo '<h4>' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</h4>';
+    if (empty($entries)) {
+        echo '<div class="jdb2xml-empty">No log entries.</div>';
+        return;
+    }
+    echo '<table class="jdb2xml-log-table">';
+    echo '<thead><tr><th>Date/time</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody>';
+    foreach ($entries as $entry) {
+        $timestamp = (string) ($entry['timestamp'] ?? '');
+        $action = (string) ($entry['action'] ?? '');
+        $title = (string) ($entry['title'] ?? '');
+        $identifier = (string) ($entry['identifier'] ?? '');
+        $details = $entry['details'] ?? [];
+        $detailsText = '';
+        if (!empty($details) && is_array($details)) {
+            $detailsText = implode(', ', array_map('strval', $details));
+        }
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($timestamp, ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>' . htmlspecialchars(trim($title . ' ' . $identifier), ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>' . htmlspecialchars($detailsText, ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '</tr>';
+    }
+    echo '</tbody></table>';
+}
 ?>
 
 <form action="index.php?option=com_jdb2xml" method="post" name="adminForm" id="adminForm">
@@ -130,133 +178,111 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
   <div class="jdb2xml">
     <h2>Preview</h2>
+    <div class="jdb2xml-tabs" role="tablist">
+      <button type="button" class="jdb2xml-tab-btn is-active" data-tab-target="preview" role="tab">Preview</button>
+      <button type="button" class="jdb2xml-tab-btn" data-tab-target="log" role="tab">Log</button>
+    </div>
 
-<div class="jdb2xml-filebar">
-  <label for="selected_file"><strong>File</strong></label>
-  <select name="selected_file" id="selected_file">
-    <option value="">-- select --</option>
-    <?php foreach ($filenames as $fn): ?>
-      <option value="<?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($fn === $selected ? 'selected' : ''); ?>>
-        <?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>
-      </option>
-    <?php endforeach; ?>
-  </select>
-  <span class="jdb2xml-hint">Choose a file and then click <strong>Preview</strong>.</span>
-</div>
+    <div class="jdb2xml-tab-panel is-active" data-tab-panel="preview">
+      <div class="jdb2xml-filebar">
+        <label for="selected_file"><strong>File</strong></label>
+        <select name="selected_file" id="selected_file">
+          <option value="">-- select --</option>
+          <?php foreach ($filenames as $fn): ?>
+            <option value="<?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($fn === $selected ? 'selected' : ''); ?>>
+              <?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <span class="jdb2xml-hint">Choose a file and then click <strong>Preview</strong>.</span>
+      </div>
 
-<?php if (!empty($preview) && is_array($preview)) : ?>
-  <?php $filterActions = collectActions($preview); ?>
-  <div class="jdb2xml-filters" data-jdb2xml-filters>
-    <span class="jdb2xml-filter-label">Filter:</span>
-    <?php foreach ($filterActions as $action) : ?>
-      <label class="jdb2xml-filter-item">
-        <input type="checkbox" class="jdb2xml-filter-cb" data-action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" checked>
-        <span><?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?></span>
-      </label>
-    <?php endforeach; ?>
-    <label class="jdb2xml-filter-item jdb2xml-search">
-      <span>Search:</span>
-      <input type="search" class="jdb2xml-search-input" placeholder="search..." aria-label="Search in preview">
-    </label>
-  </div>
-<?php endif; ?>
+      <?php if (!empty($preview) && is_array($preview)) : ?>
+        <?php $filterActions = collectActions($preview); ?>
+        <div class="jdb2xml-filters" data-jdb2xml-filters>
+          <span class="jdb2xml-filter-label">Filter:</span>
+          <?php foreach ($filterActions as $action) : ?>
+            <label class="jdb2xml-filter-item">
+              <input type="checkbox" class="jdb2xml-filter-cb" data-action="<?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?>" checked>
+              <span><?php echo htmlspecialchars($action, ENT_QUOTES, 'UTF-8'); ?></span>
+            </label>
+          <?php endforeach; ?>
+          <label class="jdb2xml-filter-item jdb2xml-search">
+            <span>Search:</span>
+            <input type="search" class="jdb2xml-search-input" placeholder="search..." aria-label="Search in preview">
+          </label>
+        </div>
+      <?php endif; ?>
 
+      <?php if (!$showPreview): ?>
+        <div class="jdb2xml-empty">Select a file and click <strong>Preview</strong>.</div>
+      <?php elseif (empty($preview) || !is_array($preview)): ?>
+        <div class="jdb2xml-empty">No preview data available for this file. Click <strong>Preview</strong> again.</div>
+      <?php else: ?>
 
+        <?php foreach ($preview as $fileKey => $data): ?>
+          <div class="jdb2xml-file">
+            <div class="jdb2xml-grid">
+              <?php
+                $categoryTree = $data['categoryTree'] ?? [];
+                $tagTree = $data['tagTree'] ?? [];
+                $articleTree = $data['articleTree'] ?? [];
+                $warningText = '';
+                if (!empty($data['warnings']) && is_array($data['warnings'])) {
+                    $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
+                }
+              ?>
 
-    <?php if (!$showPreview): ?>
-      <div class="jdb2xml-empty">Select a file and click <strong>Preview</strong>.</div>
-    <?php elseif (empty($preview) || !is_array($preview)): ?>
-      <div class=\"jdb2xml-empty\">No preview data available for this file. Click <strong>Preview</strong> again.</div>
-    <?php else: ?>
+              <?php if ($warningText !== ''): ?>
+                <div class="jdb2xml-warn" role="alert">
+                  <?php echo $warningText; ?>
+                </div>
+              <?php endif; ?>
 
-      <?php foreach ($preview as $fileKey => $data): ?>
-        <div class="jdb2xml-file">
-          <div class="jdb2xml-grid">
-            <?php
-              $tree = $data['categoryTree'] ?? [];
-              $hasTags = !empty($data['tags']) && is_array($data['tags']);
-              $warningText = '';
-              if (!empty($data['warnings']) && is_array($data['warnings'])) {
-                  $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
-              }
-              $warningOnTags = $hasTags;
-            ?>
-            <?php if ($hasTags): ?>
-              <div class="jdb2xml-left">
-                <?php if ($warningText !== '' && $warningOnTags): ?>
-                  <div class="jdb2xml-warn" role="alert">
-                    <?php echo $warningText; ?>
-                  </div>
-                <?php endif; ?>
-                <h4>Tags</h4>
-                <table class="jdb2xml-table">
-                  <thead><tr>
-                    <th class="jdb2xml-head-check">Action</th>
-                    <th class="jdb2xml-head-title">Title</th>
-                    <th>Alias</th>
-                    <th></th>
-                    <th></th>
-                  </tr></thead>
-                  <tbody>
-                    <?php foreach ($data['tags'] as $tag): ?>
-                      <?php $tagAction = (string)($tag['action'] ?? ''); ?>
-                      <?php
-                        $tagTitle = (string)($tag['title'] ?? '-');
-                        $tagAlias = (string)($tag['id'] ?? '');
-                        $tagExclude = !empty($tag['exclude']);
-                        $tagReason = (string)($tag['reason'] ?? '');
-                        $tagSearch = strtolower(trim($tagTitle . ' ' . $tagAlias));
-                      ?>
-                      <tr class="jdb2xml-tag-row"
-                          data-action="<?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>"
-                          data-search="<?php echo htmlspecialchars($tagSearch, ENT_QUOTES, 'UTF-8'); ?>"
-                          data-reason="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
-                        <td class="jdb2xml-cell jdb2xml-check">
-                          <?php if ($tagAlias !== ''): ?>
-                            <label class="jdb2xml-exclude">
-                              <input class="jdb2xml-exclude-cb" type="checkbox"
-                                     name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?>]"
-                                     value="1"<?php echo $tagExclude ? ' checked' : ''; ?>>
-                              <span>Exclude</span>
-                            </label>
-                          <?php endif; ?>
-                        </td>
-                        <td class="jdb2xml-cell jdb2xml-title">
-                          <?php echo htmlspecialchars($tagTitle, ENT_QUOTES, 'UTF-8'); ?>
-                          <?php if ($tagAction === 'new'): ?>
-                            <span class="jdb2xml-new-icon">new</span>
-                          <?php endif; ?>
-                        </td>
-                        <td class="jdb2xml-cell jdb2xml-path">
-                          <?php if ($tagAlias !== ''): ?>
-                            <code><?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?></code>
-                          <?php endif; ?>
-                        </td>
-                        <td class="jdb2xml-cell jdb2xml-actions"></td>
-                        <td class="jdb2xml-cell jdb2xml-badge-cell">
-                          <?php if ($tagAction !== ''): ?>
-                            <span class="jdb2xml-badge" title="<?php echo htmlspecialchars($tagReason, ENT_QUOTES, 'UTF-8'); ?>">
-                              <?php echo htmlspecialchars($tagAction, ENT_QUOTES, 'UTF-8'); ?>
-                            </span>
-                          <?php endif; ?>
-                        </td>
-                      </tr>
-                    <?php endforeach; ?>
-                  </tbody>
-                </table>
-              </div>
-            <?php endif; ?>
+              <?php if (!empty($categoryTree)) : ?>
+                <div class="jdb2xml-left">
+                  <h4>Categories</h4>
+                  <?php
+                    echo '<table class="jdb2xml-table" data-jdb2xml-tree>';
+                    echo '<thead><tr>';
+                    echo '<th class="jdb2xml-head-check">Action</th>';
+                    echo '<th class="jdb2xml-head-title">Title</th>';
+                    echo '<th>Path</th>';
+                    echo '<th></th>';
+                    echo '<th></th>';
+                    echo '</tr></thead>';
+                    echo '<tbody>';
+                    renderTreeWithExclude($categoryTree, $fileKey);
+                    echo '</tbody></table>';
+                  ?>
+                </div>
+              <?php endif; ?>
 
-            <?php if (!empty($tree)) : ?>
-              <div class="<?php echo $hasTags ? 'jdb2xml-right' : 'jdb2xml-left'; ?>">
-                <?php if ($warningText !== '' && !$warningOnTags): ?>
-                  <div class="jdb2xml-warn" role="alert">
-                    <?php echo $warningText; ?>
-                  </div>
-                <?php endif; ?>
-                <h4>Categories</h4>
+              <?php if (!empty($tagTree)) : ?>
+                <div class="jdb2xml-right">
+                  <h4>Tags</h4>
+                  <?php
+                    echo '<table class="jdb2xml-table" data-jdb2xml-tree>';
+                    echo '<thead><tr>';
+                    echo '<th class="jdb2xml-head-check">Action</th>';
+                    echo '<th class="jdb2xml-head-title">Title</th>';
+                    echo '<th>Path</th>';
+                    echo '<th></th>';
+                    echo '<th></th>';
+                    echo '</tr></thead>';
+                    echo '<tbody>';
+                    renderTreeWithExclude($tagTree, $fileKey);
+                    echo '</tbody></table>';
+                  ?>
+                </div>
+              <?php endif; ?>
+            </div>
+
+            <?php if (!empty($articleTree)) : ?>
+              <div class="jdb2xml-articles">
+                <h4>Articles</h4>
                 <?php
-                  echo '<table class="jdb2xml-table">';
+                  echo '<table class="jdb2xml-table" data-jdb2xml-tree>';
                   echo '<thead><tr>';
                   echo '<th class="jdb2xml-head-check">Action</th>';
                   echo '<th class="jdb2xml-head-title">Title</th>';
@@ -265,22 +291,31 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                   echo '<th></th>';
                   echo '</tr></thead>';
                   echo '<tbody>';
-                  renderTreeWithExclude($tree, $fileKey);
+                  renderTreeWithExclude($articleTree, $fileKey);
                   echo '</tbody></table>';
                 ?>
               </div>
-            <?php elseif (!$hasTags && $warningText !== ''): ?>
-              <div class="jdb2xml-left">
-                <div class="jdb2xml-warn" role="alert">
-                  <?php echo $warningText; ?>
-                </div>
-              </div>
             <?php endif; ?>
           </div>
-        </div>
-      <?php endforeach; ?>
+        <?php endforeach; ?>
 
-    <?php endif; ?>
+      <?php endif; ?>
+    </div>
+
+    <div class="jdb2xml-tab-panel" data-tab-panel="log">
+      <div class="jdb2xml-log-section">
+        <h3>Changes</h3>
+        <?php renderLogTable('Categories', $changeCategories); ?>
+        <?php renderLogTable('Tags', $changeTags); ?>
+        <?php renderLogTable('Articles', $changeArticles); ?>
+      </div>
+      <div class="jdb2xml-log-section">
+        <h3>Rollbacks</h3>
+        <?php renderLogTable('Categories', $rollbackCategories); ?>
+        <?php renderLogTable('Tags', $rollbackTags); ?>
+        <?php renderLogTable('Articles', $rollbackArticles); ?>
+      </div>
+    </div>
   </div>
 </form>
 <div class="jdb2xml-footer">Copyright Robin Colbers.</div>
@@ -291,6 +326,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .jdb2xml-grid { display:flex; gap: 18px; align-items:flex-start; }
 .jdb2xml-left { flex: 1 1 65%; min-width: 380px; }
 .jdb2xml-right { flex: 0 0 35%; min-width: 280px; }
+.jdb2xml-tabs { display: flex; gap: 8px; margin: 8px 0 12px; }
+.jdb2xml-tab-btn { border: 1px solid #ccc; background: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.jdb2xml-tab-btn.is-active { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+.jdb2xml-tab-panel { display: none; }
+.jdb2xml-tab-panel.is-active { display: block; }
 .jdb2xml-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 .jdb2xml-table th, .jdb2xml-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }
 .jdb2xml-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: #666; }
@@ -328,6 +368,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   box-sizing: border-box;
   width: 100%;
 }
+.jdb2xml-articles { margin-top: 18px; }
+.jdb2xml-log-section { margin-top: 16px; }
+.jdb2xml-log-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.jdb2xml-log-table th, .jdb2xml-log-table td { padding: 6px 8px; border-bottom: 1px solid #e5e5e5; text-align: left; }
+.jdb2xml-log-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: #666; }
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
@@ -420,16 +465,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".jdb2xml-row[data-action]").forEach(function (row) {
       var action = row.getAttribute("data-action") || "";
       var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
-      var actionMatch = checked.includes(action);
-      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
-      var shouldShow = actionMatch && searchMatch;
-      row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
-    });
-
-    document.querySelectorAll(".jdb2xml-tag-row[data-action]").forEach(function (row) {
-      var action = row.getAttribute("data-action") || "";
-      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
-      var actionMatch = checked.includes(action);
+      var actionMatch = action === "" || checked.includes(action);
       var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
       var shouldShow = actionMatch && searchMatch;
       row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
@@ -441,6 +477,31 @@ document.addEventListener("DOMContentLoaded", function () {
   updateFilter();
 });
 
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var tabs = document.querySelectorAll(".jdb2xml-tab-btn");
+  var panels = document.querySelectorAll(".jdb2xml-tab-panel");
+  if (!tabs.length || !panels.length) {
+    return;
+  }
+
+  function activateTab(name) {
+    tabs.forEach(function (tab) {
+      tab.classList.toggle("is-active", tab.getAttribute("data-tab-target") === name);
+    });
+    panels.forEach(function (panel) {
+      panel.classList.toggle("is-active", panel.getAttribute("data-tab-panel") === name);
+    });
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var target = tab.getAttribute("data-tab-target");
+      activateTab(target);
+    });
+  });
+});
 </script>
 <?php if (!empty($this->selectedFile)) : ?>
 <a class="btn btn-primary"
