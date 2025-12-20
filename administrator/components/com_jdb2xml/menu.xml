@@ -2,8 +2,20 @@
 <!-- Copyright Robin Colbers. -->
 <menu>
   <submenu>
-    <menu link="index.php?option=com_jdb2xml" view="controlpanel">
+    <menu link="index.php?option=com_jdb2xml&view=landing" view="landing">
       JDB2XML
+    </menu>
+    <menu link="index.php?option=com_jdb2xml&view=controlpanel" view="controlpanel">
+      Manual Import
+    </menu>
+    <menu link="index.php?option=com_jdb2xml&view=importautomatic" view="importautomatic">
+      Automatic Import
+    </menu>
+    <menu link="index.php?option=com_jdb2xml&view=export" view="export">
+      Export
+    </menu>
+    <menu link="index.php?option=com_jdb2xml&view=rollback" view="rollback">
+      Rollback
     </menu>
   </submenu>
 </menu>

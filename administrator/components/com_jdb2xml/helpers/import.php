@@ -18,14 +18,14 @@ class Jdb2xmlImportHelper
     {
         $lock = JPATH_ADMINISTRATOR . '/cache/jdb2xml_import.lock';
         if (!is_dir(dirname($lock))) @mkdir(dirname($lock), 0755, true);
-        if (file_exists($lock)) return 'Import afgebroken: lock actief.';
+        if (file_exists($lock)) return 'Import aborted: lock active.';
         @file_put_contents($lock, (string) time());
 
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'tags' => []],
-            'updated' => ['categories' => [], 'tags' => []],
+            'created' => ['categories' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -39,8 +39,9 @@ class Jdb2xmlImportHelper
         if (!is_dir($processedDir)) @mkdir($processedDir, 0755, true);
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
-        $createdCats = $updatedCats = $skippedCats = 0;
-        $createdTags = $updatedTags = $skippedTags = 0;
+        $createdCats = $changedCats = $skippedCats = 0;
+        $createdTags = $changedTags = $skippedTags = 0;
+        $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
@@ -71,7 +72,9 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
+        $allowedArticleSet = null;
         $allowTags = true;
+        $allowArticles = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -85,6 +88,16 @@ class Jdb2xmlImportHelper
                     $allowedCategorySet[$key] = true;
                 }
                 $allowTags = !empty($previewData['tags']) && is_array($previewData['tags']);
+                $allowArticles = !empty($previewData['articles']) && is_array($previewData['articles']);
+                $allowedArticleSet = [];
+                $rows = $previewData['articles'] ?? [];
+                foreach ($rows as $row) {
+                    $key = (string)($row['id'] ?? '');
+                    if ($key === '' || isset($excludeSet[$key])) {
+                        continue;
+                    }
+                    $allowedArticleSet[$key] = true;
+                }
             }
         }
 
@@ -95,7 +108,7 @@ class Jdb2xmlImportHelper
             if ($selectedFile) {
                 $path = $dir . '/' . basename($selectedFile);
                 if (!is_file($path)) {
-                    throw new RuntimeException('Bestand niet gevonden in import map: ' . $path);
+                    throw new RuntimeException('File not found in import folder: ' . $path);
                 }
                 $files = [$path];
             }
@@ -104,27 +117,35 @@ class Jdb2xmlImportHelper
                     return isset($planMap[basename($f)]);
                 }));
             }
-            if (!$files) return 'Geen XML-bestanden gevonden.';
+            if (!$files) return 'No XML files found.';
 
             foreach ($files as $file) {
                 try {
                     $xmlString = file_get_contents($file);
-                    if (!$xmlString) throw new RuntimeException('Leeg bestand');
+                    if (!$xmlString) throw new RuntimeException('Empty file');
                     libxml_use_internal_errors(true);
                     $xml = simplexml_load_string($xmlString);
-                    if (!$xml) throw new RuntimeException('Ongeldige XML');
+                    if (!$xml) throw new RuntimeException('Invalid XML');
 
                     if (isset($xml->categories)) {
-                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     } elseif ($xml->getName() === 'categories') {
-                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
                     if ($allowTags) {
                         if (isset($xml->tags)) {
-                            self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                            self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
                         } elseif ($xml->getName() === 'tags') {
-                            self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                            self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
+                        }
+                    }
+
+                    if ($allowArticles) {
+                        if (isset($xml->articles)) {
+                            self::importArticles($db, $xml->articles, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
+                        } elseif ($xml->getName() === 'articles') {
+                            self::importArticles($db, $xml, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
                         }
                     }
 
@@ -142,18 +163,19 @@ class Jdb2xmlImportHelper
             }
 
             $msg = [];
-            $msg[] = 'Import afgerond' . ($dryRun ? ' (dry-run)' : '') . '.';
-            $msg[] = 'Categorieën: nieuw=' . $createdCats . ', aangevuld=' . $updatedCats . ', overgeslagen=' . $skippedCats;
-            $msg[] = 'Tags: nieuw=' . $createdTags . ', aangevuld=' . $updatedTags . ', overgeslagen=' . $skippedTags;
-            if ($warnings) $msg[] = 'Waarschuwingen: ' . implode(' | ', array_unique($warnings));
-            if (!$dryRun && $rollbackFile) $msg[] = 'Rollback-log: ' . basename($rollbackFile);
+            $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
+            $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
+            $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
+            if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
+            if (!$dryRun && $rollbackFile) $msg[] = 'Rollback log: ' . basename($rollbackFile);
             return implode(' ', $msg);
         } finally {
             @unlink($lock);
         }
     }
 
-    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
+    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
         $extension = (string) ($categories['extension'] ?? 'com_content');
 
@@ -185,6 +207,13 @@ class Jdb2xmlImportHelper
                 $changed = false;
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
+                $xmlTitle = (string) ($node->title ?? '');
+                if ($xmlTitle !== '' && (string) ($existing->title ?? '') !== $xmlTitle) {
+                    $before['fields']['title'] = (string) ($existing->title ?? '');
+                    $existing->title = $xmlTitle;
+                    $changed = true;
+                }
+
                 foreach ($map as $field => $value) {
                     if ($value === '') continue;
                     if (!property_exists($existing, $field)) continue;
@@ -201,7 +230,7 @@ class Jdb2xmlImportHelper
                         $db->updateObject('#__categories', $existing, 'id');
                         $rollback['updated']['categories'][] = $before;
                     }
-                    $updated++;
+                    $changed++;
                 } else {
                     $skipped++;
                 }
@@ -243,10 +272,10 @@ class Jdb2xmlImportHelper
             $table->bind($data);
             $table->setLocation($parentId, 'last-child');
             if (!$table->check()) {
-                throw new RuntimeException('Categorie check mislukt: ' . $table->getError());
+                throw new RuntimeException('Category check failed: ' . $table->getError());
             }
             if (!$table->store()) {
-                throw new RuntimeException('Categorie opslaan mislukt: ' . $table->getError());
+                throw new RuntimeException('Category save failed: ' . $table->getError());
             }
             if (method_exists($table, 'rebuildPath')) {
                 $table->rebuildPath($table->id);
@@ -257,7 +286,7 @@ class Jdb2xmlImportHelper
         }
     }
 
-    private static function importTags($db, $tags, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback): void
+    private static function importTags($db, $tags, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback): void
     {
         foreach ($tags->tag as $node) {
             $alias = trim((string) ($node->alias ?? ''));
@@ -269,16 +298,19 @@ class Jdb2xmlImportHelper
             $existing = $db->setQuery($query)->loadObject();
 
             $map = [
+                'title'       => (string) ($node->title ?? ''),
                 'description' => (string) ($node->description ?? ''),
                 'language'    => (string) ($node->language ?? ''),
                 'params'      => (string) ($node->params ?? ''),
                 'metadata'    => (string) ($node->metadata ?? ''),
                 'access'      => (string) ($node->access ?? ''),
                 'published'   => (string) ($node->published ?? ''),
+                'parent_id'   => (string) ($node->parent_id ?? ''),
             ];
 
             if ($existing) {
-                $changed = false;
+                $changedLocal = false;
+                $parentChange = false;
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
                 foreach ($map as $field => $value) {
@@ -288,16 +320,40 @@ class Jdb2xmlImportHelper
                     if ($dbVal !== $value) {
                         $before['fields'][$field] = $dbVal;
                         $existing->$field = $value;
-                        $changed = true;
+                        $changedLocal = true;
+                        if ($field === 'parent_id' && $value !== '') {
+                            $parentChange = true;
+                        }
                     }
                 }
 
-                if ($changed) {
+                if ($changedLocal) {
                     if (!$dryRun) {
-                        $db->updateObject('#__tags', $existing, 'id');
+                        if ($parentChange) {
+                            Table::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_tags/tables');
+                            $table = Table::getInstance('Tag', 'TagsTable');
+                            if ($table === false || !$table->load((int) $existing->id)) {
+                                throw new RuntimeException('Tag-table kan niet worden geladen');
+                            }
+                            foreach ($map as $field => $value) {
+                                if ($value === '') {
+                                    continue;
+                                }
+                                $table->$field = $existing->$field;
+                            }
+                            $table->setLocation((int) $existing->parent_id, 'last-child');
+                            if (!$table->check()) {
+                                throw new RuntimeException('Tag check failed: ' . $table->getError());
+                            }
+                            if (!$table->store()) {
+                                throw new RuntimeException('Tag save failed: ' . $table->getError());
+                            }
+                        } else {
+                            $db->updateObject('#__tags', $existing, 'id');
+                        }
                         $rollback['updated']['tags'][] = $before;
                     }
-                    $updated++;
+                    $changed++;
                 } else {
                     $skipped++;
                 }
@@ -321,19 +377,157 @@ class Jdb2xmlImportHelper
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
-                'parent_id' => 1,
+                'parent_id' => (int) ($node->parent_id ?? 1),
             ];
             $table->bind($data);
             $table->setLocation(1, 'last-child');
             if (!$table->check()) {
-                throw new RuntimeException('Tag check mislukt: ' . $table->getError());
+                throw new RuntimeException('Tag check failed: ' . $table->getError());
             }
             if (!$table->store()) {
-                throw new RuntimeException('Tag opslaan mislukt: ' . $table->getError());
+                throw new RuntimeException('Tag save failed: ' . $table->getError());
             }
 
             $rollback['created']['tags'][] = (int) $table->id;
             $created++;
         }
+    }
+
+    private static function importArticles(
+        $db,
+        $articles,
+        bool $dryRun,
+        array $exclude,
+        int &$created,
+        int &$changed,
+        int &$skipped,
+        array &$warnings,
+        array &$rollback,
+        ?array $allowed = null
+    ): void {
+        Table::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_content/tables');
+
+        foreach ($articles->article as $node) {
+            $alias = trim((string) ($node->alias ?? ''));
+            $catid = (int) ($node->catid ?? 0);
+            $key = self::buildArticleKey($alias, $catid);
+
+            if ($alias === '' || $catid === 0) {
+                $skipped++;
+                $warnings[] = 'Article without alias or category skipped.';
+                continue;
+            }
+            if (isset($exclude[$key])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$key])) { $skipped++; continue; }
+
+            $query = $db->getQuery(true)
+                ->select('*')->from('#__content')
+                ->where('alias=' . $db->quote($alias))
+                ->where('catid=' . (int) $catid);
+            $existing = $db->setQuery($query)->loadObject();
+
+            $fields = [
+                'title' => (string) ($node->title ?? ''),
+                'introtext' => (string) ($node->introtext ?? ''),
+                'fulltext' => (string) ($node->fulltext ?? ''),
+                'state' => (string) ($node->state ?? ''),
+                'access' => (string) ($node->access ?? ''),
+                'language' => (string) ($node->language ?? ''),
+                'created' => (string) ($node->created ?? ''),
+                'created_by' => (string) ($node->created_by ?? ''),
+                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'modified' => (string) ($node->modified ?? ''),
+                'modified_by' => (string) ($node->modified_by ?? ''),
+                'publish_up' => (string) ($node->publish_up ?? ''),
+                'publish_down' => (string) ($node->publish_down ?? ''),
+                'ordering' => (string) ($node->ordering ?? ''),
+                'featured' => (string) ($node->featured ?? ''),
+                'hits' => (string) ($node->hits ?? ''),
+                'images' => (string) ($node->images ?? ''),
+                'urls' => (string) ($node->urls ?? ''),
+                'attribs' => (string) ($node->attribs ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+                'metadesc' => (string) ($node->metadesc ?? ''),
+                'metakey' => (string) ($node->metakey ?? ''),
+                'note' => (string) ($node->note ?? ''),
+            ];
+
+            if ($existing) {
+                $changedLocal = false;
+                $before = ['id' => (int)$existing->id, 'fields' => []];
+
+                foreach ($fields as $field => $value) {
+                    if (!property_exists($existing, $field)) {
+                        continue;
+                    }
+                    $dbVal = (string) ($existing->$field ?? '');
+                    if ($dbVal !== $value) {
+                        $before['fields'][$field] = $dbVal;
+                        $existing->$field = $value;
+                        $changedLocal = true;
+                    }
+                }
+
+                if ($changedLocal) {
+                    if (!$dryRun) {
+                        $db->updateObject('#__content', $existing, 'id');
+                        $rollback['updated']['articles'][] = $before;
+                    }
+                    $changed++;
+                } else {
+                    $skipped++;
+                }
+                continue;
+            }
+
+            if ($dryRun) { $created++; continue; }
+
+            $table = Table::getInstance('Content');
+            if ($table === false) {
+                throw new RuntimeException('Article-table can not be loaded');
+            }
+            $data = [
+                'title' => (string) ($node->title ?? $alias),
+                'alias' => $alias,
+                'catid' => $catid,
+                'introtext' => (string) ($node->introtext ?? ''),
+                'fulltext' => (string) ($node->fulltext ?? ''),
+                'state' => (int) ($node->state ?? 1),
+                'access' => (int) ($node->access ?? 1),
+                'language' => (string) ($node->language ?? '*'),
+                'created' => (string) ($node->created ?? Factory::getDate()->toSql()),
+                'created_by' => (int) ($node->created_by ?? 0),
+                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'modified' => (string) ($node->modified ?? $db->getNullDate()),
+                'modified_by' => (int) ($node->modified_by ?? 0),
+                'publish_up' => (string) ($node->publish_up ?? $db->getNullDate()),
+                'publish_down' => (string) ($node->publish_down ?? $db->getNullDate()),
+                'ordering' => (int) ($node->ordering ?? 0),
+                'featured' => (int) ($node->featured ?? 0),
+                'hits' => (int) ($node->hits ?? 0),
+                'images' => (string) ($node->images ?? ''),
+                'urls' => (string) ($node->urls ?? ''),
+                'attribs' => (string) ($node->attribs ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+                'metadesc' => (string) ($node->metadesc ?? ''),
+                'metakey' => (string) ($node->metakey ?? ''),
+                'note' => (string) ($node->note ?? ''),
+            ];
+            $table->bind($data);
+            if (!$table->check()) {
+                throw new RuntimeException('Article check failed: ' . $table->getError());
+            }
+            if (!$table->store()) {
+                throw new RuntimeException('Article save failed: ' . $table->getError());
+            }
+
+            $rollback['created']['articles'][] = (int) $table->id;
+            $created++;
+        }
+    }
+
+    private static function buildArticleKey(string $alias, int $catid): string
+    {
+        return 'article:' . $catid . ':' . $alias;
     }
 }

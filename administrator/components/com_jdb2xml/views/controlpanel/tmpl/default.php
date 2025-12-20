@@ -18,19 +18,10 @@ $filenames = array_map('basename', $files);
 
 $selected = basename((string) $input->getString('selected_file', (string) $app->getUserState('com_jdb2xml.selected_file', '')));
 $showPreview = (int) $input->getInt('show_preview', 0) === 1;
-$showRollback = (int) $input->getInt('show_rollback', (int) $app->getUserState('com_jdb2xml.show_rollback', 0)) === 1;
 
 $preview = null;
 if ($showPreview && $selected) {
     $preview = $app->getUserState('com_jdb2xml.preview.' . $selected);
-}
-
-$rollbackCategories = [];
-$rollbackTags = [];
-if ($showRollback) {
-    require_once __DIR__ . '/../../../helpers/rollback.php';
-    $rollbackCategories = Jdb2xmlRollbackHelper::listLogsByType('categories');
-    $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 }
 
 function collectActionsFromTree(array $nodes, array &$actions): void
@@ -56,6 +47,14 @@ function collectActions(array $preview): array
         if (!empty($data['tags']) && is_array($data['tags'])) {
             foreach ($data['tags'] as $tag) {
                 $action = (string)($tag['action'] ?? '');
+                if ($action !== '') {
+                    $actions[$action] = true;
+                }
+            }
+        }
+        if (!empty($data['articles']) && is_array($data['articles'])) {
+            foreach ($data['articles'] as $article) {
+                $action = (string)($article['action'] ?? '');
                 if ($action !== '') {
                     $actions[$action] = true;
                 }
@@ -92,7 +91,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
             $checked = !empty($n['exclude']) ? ' checked' : '';
             echo '<label class="jdb2xml-exclude">';
             echo '<input class="jdb2xml-exclude-cb" type="checkbox" name="exclude[' . htmlspecialchars($file, ENT_QUOTES, 'UTF-8') . '][' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . ']" value="1"' . $checked . '>';
-            echo '<span>Uitsluiten</span>';
+            echo '<span>Exclude</span>';
             echo '</label>';
         }
         echo '</td>';
@@ -100,8 +99,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         $indent = $level * 18;
         echo '<td class="jdb2xml-cell jdb2xml-title" style="padding-left:' . (int)$indent . 'px;">';
         echo '<span class="jdb2xml-node">' . htmlspecialchars($prefix . $title, ENT_QUOTES, 'UTF-8') . '</span>';
-        if ($action === 'nieuw') {
-            echo ' <span class="jdb2xml-new-icon">nieuw</span>';
+        if ($action === 'new') {
+            echo ' <span class="jdb2xml-new-icon">new</span>';
         }
         echo '</td>';
 
@@ -113,8 +112,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
         echo '<td class="jdb2xml-cell jdb2xml-actions">';
         if (!empty($n['children'])) {
-            echo '<button type="button" class="btn btn-sm btn-outline-danger jdb2xml-exclude-all">Alles uitsluiten</button>';
-            echo '<button type="button" class="btn btn-sm btn-outline-success jdb2xml-include-all">Alles insluiten</button>';
+            echo '<button type="button" class="btn btn-sm btn-outline-danger jdb2xml-exclude-all">Exclude all</button>';
+            echo '<button type="button" class="btn btn-sm btn-outline-success jdb2xml-include-all">Include all</button>';
         }
         echo '</td>';
 
@@ -133,48 +132,6 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 }
 ?>
 
-<?php if ($showRollback): ?>
-  <div class="jdb2xml">
-    <h2>Rollback</h2>
-    <div class="jdb2xml-grid">
-      <div class="jdb2xml-left">
-        <h4>Categorieën</h4>
-        <form action="index.php?option=com_jdb2xml" method="post" class="jdb2xml-rollback-form">
-          <input type="hidden" name="task" value="rollbackapply">
-          <input type="hidden" name="rollback_type" value="categories">
-          <?php echo HTMLHelper::_('form.token'); ?>
-          <select name="rollback_file" class="jdb2xml-rollback-select">
-            <option value="">-- selecteer --</option>
-            <?php foreach ($rollbackCategories as $file): ?>
-              <option value="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>">
-                <?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <button type="submit" class="btn btn-warning">Rollback categorieën</button>
-        </form>
-      </div>
-      <div class="jdb2xml-right">
-        <h4>Tags</h4>
-        <form action="index.php?option=com_jdb2xml" method="post" class="jdb2xml-rollback-form">
-          <input type="hidden" name="task" value="rollbackapply">
-          <input type="hidden" name="rollback_type" value="tags">
-          <?php echo HTMLHelper::_('form.token'); ?>
-          <select name="rollback_file" class="jdb2xml-rollback-select">
-            <option value="">-- selecteer --</option>
-            <?php foreach ($rollbackTags as $file): ?>
-              <option value="<?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>">
-                <?php echo htmlspecialchars($file, ENT_QUOTES, 'UTF-8'); ?>
-              </option>
-            <?php endforeach; ?>
-          </select>
-          <button type="submit" class="btn btn-warning">Rollback tags</button>
-        </form>
-      </div>
-    </div>
-  </div>
-<?php endif; ?>
-
 <form action="index.php?option=com_jdb2xml" method="post" name="adminForm" id="adminForm">
   <input type="hidden" name="task" id="task" value="">
   <?php echo HTMLHelper::_('form.token'); ?>
@@ -183,16 +140,16 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     <h2>Preview</h2>
 
 <div class="jdb2xml-filebar">
-  <label for="selected_file"><strong>Bestand</strong></label>
+  <label for="selected_file"><strong>File</strong></label>
   <select name="selected_file" id="selected_file">
-    <option value="">-- selecteer --</option>
+    <option value="">-- select --</option>
     <?php foreach ($filenames as $fn): ?>
       <option value="<?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($fn === $selected ? 'selected' : ''); ?>>
         <?php echo htmlspecialchars($fn, ENT_QUOTES, 'UTF-8'); ?>
       </option>
     <?php endforeach; ?>
   </select>
-  <span class="jdb2xml-hint">Kies een bestand en klik daarna op <strong>Preview</strong>.</span>
+  <span class="jdb2xml-hint">Choose a file and then click <strong>Preview</strong>.</span>
 </div>
 
 <?php if (!empty($preview) && is_array($preview)) : ?>
@@ -206,8 +163,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
       </label>
     <?php endforeach; ?>
     <label class="jdb2xml-filter-item jdb2xml-search">
-      <span>Zoek:</span>
-      <input type="search" class="jdb2xml-search-input" placeholder="zoek..." aria-label="Zoek in preview">
+      <span>Search:</span>
+      <input type="search" class="jdb2xml-search-input" placeholder="search..." aria-label="Search in preview">
     </label>
   </div>
 <?php endif; ?>
@@ -215,9 +172,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 
 
     <?php if (!$showPreview): ?>
-      <div class="jdb2xml-empty">Selecteer een bestand en klik op <strong>Preview</strong>.</div>
+      <div class="jdb2xml-empty">Select a file and click <strong>Preview</strong>.</div>
     <?php elseif (empty($preview) || !is_array($preview)): ?>
-      <div class=\"jdb2xml-empty\">Geen previewdata beschikbaar voor dit bestand. Klik opnieuw op <strong>Preview</strong>.</div>
+      <div class=\"jdb2xml-empty\">No preview data available for this file. Click <strong>Preview</strong> again.</div>
     <?php else: ?>
 
       <?php foreach ($preview as $fileKey => $data): ?>
@@ -226,9 +183,10 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
             <?php
               $tree = $data['categoryTree'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
+              $hasArticles = !empty($data['articles']) && is_array($data['articles']);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
-                  $warningText = htmlspecialchars('Waarschuwingen: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
+                  $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
               }
               $warningOnTags = $hasTags;
             ?>
@@ -242,8 +200,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                 <h4>Tags</h4>
                 <table class="jdb2xml-table">
                   <thead><tr>
-                    <th class="jdb2xml-head-check">Actie</th>
-                    <th class="jdb2xml-head-title">Titel</th>
+                    <th class="jdb2xml-head-check">Action</th>
+                    <th class="jdb2xml-head-title">Title</th>
                     <th>Alias</th>
                     <th></th>
                     <th></th>
@@ -268,14 +226,14 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                               <input class="jdb2xml-exclude-cb" type="checkbox"
                                      name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($tagAlias, ENT_QUOTES, 'UTF-8'); ?>]"
                                      value="1"<?php echo $tagExclude ? ' checked' : ''; ?>>
-                              <span>Uitsluiten</span>
+                              <span>Exclude</span>
                             </label>
                           <?php endif; ?>
                         </td>
                         <td class="jdb2xml-cell jdb2xml-title">
                           <?php echo htmlspecialchars($tagTitle, ENT_QUOTES, 'UTF-8'); ?>
-                          <?php if ($tagAction === 'nieuw'): ?>
-                            <span class="jdb2xml-new-icon">nieuw</span>
+                          <?php if ($tagAction === 'new'): ?>
+                            <span class="jdb2xml-new-icon">new</span>
                           <?php endif; ?>
                         </td>
                         <td class="jdb2xml-cell jdb2xml-path">
@@ -305,13 +263,13 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                     <?php echo $warningText; ?>
                   </div>
                 <?php endif; ?>
-                <h4>Categorieën</h4>
+                <h4>Categories</h4>
                 <?php
                   echo '<table class="jdb2xml-table">';
                   echo '<thead><tr>';
-                  echo '<th class="jdb2xml-head-check">Actie</th>';
-                  echo '<th class="jdb2xml-head-title">Titel</th>';
-                  echo '<th>Pad</th>';
+                  echo '<th class="jdb2xml-head-check">Action</th>';
+                  echo '<th class="jdb2xml-head-title">Title</th>';
+                  echo '<th>Path</th>';
                   echo '<th></th>';
                   echo '<th></th>';
                   echo '</tr></thead>';
@@ -328,6 +286,72 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               </div>
             <?php endif; ?>
           </div>
+          <?php if ($hasArticles): ?>
+            <div class="jdb2xml-articles">
+              <h4>Articles</h4>
+              <table class="jdb2xml-table">
+                <thead><tr>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Alias</th>
+                  <th>Category</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  <?php foreach ($data['articles'] as $article): ?>
+                    <?php
+                      $articleAction = (string)($article['action'] ?? '');
+                      $articleTitle = (string)($article['title'] ?? '-');
+                      $articleAlias = (string)($article['alias'] ?? '');
+                      $articleCatid = (string)($article['catid'] ?? '');
+                      $articleKey = (string)($article['id'] ?? '');
+                      $articleExclude = !empty($article['exclude']);
+                      $articleReason = (string)($article['reason'] ?? '');
+                      $articleSearch = strtolower(trim($articleTitle . ' ' . $articleAlias . ' ' . $articleCatid));
+                    ?>
+                    <tr class="jdb2xml-article-row"
+                        data-action="<?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-search="<?php echo htmlspecialchars($articleSearch, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-reason="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
+                      <td class="jdb2xml-cell jdb2xml-check">
+                        <?php if ($articleKey !== ''): ?>
+                          <label class="jdb2xml-exclude">
+                            <input class="jdb2xml-exclude-cb" type="checkbox"
+                                   name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($articleKey, ENT_QUOTES, 'UTF-8'); ?>]"
+                                   value="1"<?php echo $articleExclude ? ' checked' : ''; ?>>
+                            <span>Exclude</span>
+                          </label>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-title">
+                        <?php echo htmlspecialchars($articleTitle, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php if ($articleAction === 'new'): ?>
+                          <span class="jdb2xml-new-icon">new</span>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-path">
+                        <?php if ($articleAlias !== ''): ?>
+                          <code><?php echo htmlspecialchars($articleAlias, ENT_QUOTES, 'UTF-8'); ?></code>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-path">
+                        <?php if ($articleCatid !== ''): ?>
+                          <code><?php echo htmlspecialchars($articleCatid, ENT_QUOTES, 'UTF-8'); ?></code>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-badge-cell">
+                        <?php if ($articleAction !== ''): ?>
+                          <span class="jdb2xml-badge" title="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>
+                          </span>
+                        <?php endif; ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
 
@@ -379,10 +403,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   box-sizing: border-box;
   width: 100%;
 }
+.jdb2xml-articles { margin-top: 18px; }
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
-.jdb2xml-rollback-form { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.jdb2xml-rollback-select { min-width: 240px; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
 </style>
 <script>
@@ -480,6 +503,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     document.querySelectorAll(".jdb2xml-tag-row[data-action]").forEach(function (row) {
+      var action = row.getAttribute("data-action") || "";
+      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
+      var actionMatch = checked.includes(action);
+      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
+      var shouldShow = actionMatch && searchMatch;
+      row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
+    });
+
+    document.querySelectorAll(".jdb2xml-article-row[data-action]").forEach(function (row) {
       var action = row.getAttribute("data-action") || "";
       var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
       var actionMatch = checked.includes(action);
