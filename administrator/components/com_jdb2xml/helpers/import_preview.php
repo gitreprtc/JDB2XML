@@ -29,6 +29,7 @@ class Jdb2xmlImportPreviewHelper
                 'categoryTree' => [],
                 'tags' => [],
                 'articles' => [],
+                'articleTree' => [],
                 'warnings' => [],
                 'hasWarnings' => false
             ];
@@ -68,6 +69,7 @@ class Jdb2xmlImportPreviewHelper
 
             // Build a tree from category paths
             $result[$fileKey]['categoryTree'] = self::buildTree($result[$fileKey]['categories']);
+            $result[$fileKey]['articleTree'] = self::buildArticleTree($result[$fileKey]['articles']);
 
             if ($result[$fileKey]['warnings']) {
                 $result[$fileKey]['hasWarnings'] = true;
@@ -125,6 +127,54 @@ class Jdb2xmlImportPreviewHelper
             }
         };
         $sortFn($tree);
+
+        return $tree;
+    }
+
+    private static function buildArticleTree(array $rows): array
+    {
+        $parents = [];
+
+        foreach ($rows as $row) {
+            $catid = (int) ($row['catid'] ?? 0);
+            $parentKey = 'cat:' . $catid;
+            if (!isset($parents[$parentKey])) {
+                $parents[$parentKey] = [
+                    'id' => $parentKey,
+                    'title' => $catid ? ('Category ' . $catid) : 'Unassigned',
+                    'path' => '',
+                    'action' => '',
+                    'reason' => '',
+                    'children' => []
+                ];
+            }
+
+            $childKey = (string) ($row['id'] ?? '');
+            if ($childKey === '') {
+                continue;
+            }
+
+            $child = $row;
+            $child['path'] = $childKey;
+            $child['displayPath'] = (string) ($row['alias'] ?? '');
+            $child['children'] = [];
+            $parents[$parentKey]['children'][] = $child;
+        }
+
+        $tree = array_values($parents);
+
+        usort($tree, function ($a, $b) {
+            return strcasecmp((string) $a['title'], (string) $b['title']);
+        });
+
+        foreach ($tree as &$parent) {
+            if (!empty($parent['children'])) {
+                usort($parent['children'], function ($a, $b) {
+                    return strcasecmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+                });
+            }
+        }
+        unset($parent);
 
         return $tree;
     }

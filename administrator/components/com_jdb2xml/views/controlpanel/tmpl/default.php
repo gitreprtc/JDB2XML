@@ -75,12 +75,13 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     foreach ($nodes as $n) {
         $title = (string)($n['title'] ?? '-');
         $path  = (string)($n['path'] ?? $n['id'] ?? '');
+        $displayPath = (string)($n['displayPath'] ?? $path);
 
         $action = (string)($n['action'] ?? '');
         $reason = (string)($n['reason'] ?? '');
 
         $prefix = $level > 0 ? str_repeat('-', $level) . ' ' : '';
-        $search = strtolower(trim($title . ' ' . $path));
+        $search = strtolower(trim($title . ' ' . $displayPath . ' ' . $path));
         $actionAttr = $action !== '' ? ' data-action="' . htmlspecialchars($action, ENT_QUOTES, 'UTF-8') . '"' : '';
         echo '<tr class="jdb2xml-row" data-depth="' . (int)$level . '"' . $actionAttr
             . ' data-search="' . htmlspecialchars($search, ENT_QUOTES, 'UTF-8') . '"'
@@ -105,8 +106,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
         echo '</td>';
 
         echo '<td class="jdb2xml-cell jdb2xml-path">';
-        if ($path !== '') {
-            echo '<code>' . htmlspecialchars($path, ENT_QUOTES, 'UTF-8') . '</code>';
+        if ($displayPath !== '') {
+            echo '<code>' . htmlspecialchars($displayPath, ENT_QUOTES, 'UTF-8') . '</code>';
         }
         echo '</td>';
 
@@ -183,7 +184,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
             <?php
               $tree = $data['categoryTree'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
-              $hasArticles = !empty($data['articles']) && is_array($data['articles']);
+              $articleTree = $data['articleTree'] ?? [];
+              $hasArticles = !empty($articleTree) && is_array($articleTree);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
                   $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
@@ -294,60 +296,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                   <th class="jdb2xml-head-check">Action</th>
                   <th class="jdb2xml-head-title">Title</th>
                   <th>Alias</th>
-                  <th>Category</th>
+                  <th></th>
                   <th></th>
                 </tr></thead>
                 <tbody>
-                  <?php foreach ($data['articles'] as $article): ?>
-                    <?php
-                      $articleAction = (string)($article['action'] ?? '');
-                      $articleTitle = (string)($article['title'] ?? '-');
-                      $articleAlias = (string)($article['alias'] ?? '');
-                      $articleCatid = (string)($article['catid'] ?? '');
-                      $articleKey = (string)($article['id'] ?? '');
-                      $articleExclude = !empty($article['exclude']);
-                      $articleReason = (string)($article['reason'] ?? '');
-                      $articleSearch = strtolower(trim($articleTitle . ' ' . $articleAlias . ' ' . $articleCatid));
-                    ?>
-                    <tr class="jdb2xml-row"
-                        data-action="<?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-search="<?php echo htmlspecialchars($articleSearch, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-reason="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
-                      <td class="jdb2xml-cell jdb2xml-check">
-                        <?php if ($articleKey !== ''): ?>
-                          <label class="jdb2xml-exclude">
-                            <input class="jdb2xml-exclude-cb" type="checkbox"
-                                   name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($articleKey, ENT_QUOTES, 'UTF-8'); ?>]"
-                                   value="1"<?php echo $articleExclude ? ' checked' : ''; ?>>
-                            <span>Exclude</span>
-                          </label>
-                        <?php endif; ?>
-                      </td>
-                      <td class="jdb2xml-cell jdb2xml-title">
-                        <?php echo htmlspecialchars($articleTitle, ENT_QUOTES, 'UTF-8'); ?>
-                        <?php if ($articleAction === 'new'): ?>
-                          <span class="jdb2xml-new-icon">new</span>
-                        <?php endif; ?>
-                      </td>
-                      <td class="jdb2xml-cell jdb2xml-path">
-                        <?php if ($articleAlias !== ''): ?>
-                          <code><?php echo htmlspecialchars($articleAlias, ENT_QUOTES, 'UTF-8'); ?></code>
-                        <?php endif; ?>
-                      </td>
-                      <td class="jdb2xml-cell jdb2xml-path">
-                        <?php if ($articleCatid !== ''): ?>
-                          <code><?php echo htmlspecialchars($articleCatid, ENT_QUOTES, 'UTF-8'); ?></code>
-                        <?php endif; ?>
-                      </td>
-                      <td class="jdb2xml-cell jdb2xml-badge-cell">
-                        <?php if ($articleAction !== ''): ?>
-                          <span class="jdb2xml-badge" title="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>
-                          </span>
-                        <?php endif; ?>
-                      </td>
-                    </tr>
-                  <?php endforeach; ?>
+                  <?php renderTreeWithExclude($articleTree, $fileKey); ?>
                 </tbody>
               </table>
             </div>
