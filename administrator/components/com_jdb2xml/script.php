@@ -10,6 +10,8 @@ class com_jdb2xmlInstallerScript
     {
         $importPath = JPATH_ROOT . '/media/com_jdb2xml/import';
         $exportPath = JPATH_ROOT . '/media/com_jdb2xml/export';
+        $processedPath = $importPath . '/processed';
+        $errorPath = $importPath . '/error';
 
         if (!Folder::exists($importPath)) {
             Folder::create($importPath);
@@ -17,6 +19,14 @@ class com_jdb2xmlInstallerScript
 
         if (!Folder::exists($exportPath)) {
             Folder::create($exportPath);
+        }
+
+        if (!Folder::exists($processedPath)) {
+            Folder::create($processedPath);
+        }
+
+        if (!Folder::exists($errorPath)) {
+            Folder::create($errorPath);
         }
     }
 }
