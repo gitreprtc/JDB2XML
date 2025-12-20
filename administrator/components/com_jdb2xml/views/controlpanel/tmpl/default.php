@@ -52,6 +52,14 @@ function collectActions(array $preview): array
                 }
             }
         }
+        if (!empty($data['articles']) && is_array($data['articles'])) {
+            foreach ($data['articles'] as $article) {
+                $action = (string)($article['action'] ?? '');
+                if ($action !== '') {
+                    $actions[$action] = true;
+                }
+            }
+        }
     }
     return array_keys($actions);
 }
@@ -175,6 +183,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
             <?php
               $tree = $data['categoryTree'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
+              $hasArticles = !empty($data['articles']) && is_array($data['articles']);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
                   $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
@@ -277,6 +286,72 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               </div>
             <?php endif; ?>
           </div>
+          <?php if ($hasArticles): ?>
+            <div class="jdb2xml-articles">
+              <h4>Articles</h4>
+              <table class="jdb2xml-table">
+                <thead><tr>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Alias</th>
+                  <th>Category</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  <?php foreach ($data['articles'] as $article): ?>
+                    <?php
+                      $articleAction = (string)($article['action'] ?? '');
+                      $articleTitle = (string)($article['title'] ?? '-');
+                      $articleAlias = (string)($article['alias'] ?? '');
+                      $articleCatid = (string)($article['catid'] ?? '');
+                      $articleKey = (string)($article['id'] ?? '');
+                      $articleExclude = !empty($article['exclude']);
+                      $articleReason = (string)($article['reason'] ?? '');
+                      $articleSearch = strtolower(trim($articleTitle . ' ' . $articleAlias . ' ' . $articleCatid));
+                    ?>
+                    <tr class="jdb2xml-article-row"
+                        data-action="<?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-search="<?php echo htmlspecialchars($articleSearch, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-reason="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
+                      <td class="jdb2xml-cell jdb2xml-check">
+                        <?php if ($articleKey !== ''): ?>
+                          <label class="jdb2xml-exclude">
+                            <input class="jdb2xml-exclude-cb" type="checkbox"
+                                   name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($articleKey, ENT_QUOTES, 'UTF-8'); ?>]"
+                                   value="1"<?php echo $articleExclude ? ' checked' : ''; ?>>
+                            <span>Exclude</span>
+                          </label>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-title">
+                        <?php echo htmlspecialchars($articleTitle, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php if ($articleAction === 'new'): ?>
+                          <span class="jdb2xml-new-icon">new</span>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-path">
+                        <?php if ($articleAlias !== ''): ?>
+                          <code><?php echo htmlspecialchars($articleAlias, ENT_QUOTES, 'UTF-8'); ?></code>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-path">
+                        <?php if ($articleCatid !== ''): ?>
+                          <code><?php echo htmlspecialchars($articleCatid, ENT_QUOTES, 'UTF-8'); ?></code>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-badge-cell">
+                        <?php if ($articleAction !== ''): ?>
+                          <span class="jdb2xml-badge" title="<?php echo htmlspecialchars($articleReason, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($articleAction, ENT_QUOTES, 'UTF-8'); ?>
+                          </span>
+                        <?php endif; ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
 
@@ -328,6 +403,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   box-sizing: border-box;
   width: 100%;
 }
+.jdb2xml-articles { margin-top: 18px; }
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
@@ -427,6 +503,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     document.querySelectorAll(".jdb2xml-tag-row[data-action]").forEach(function (row) {
+      var action = row.getAttribute("data-action") || "";
+      var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
+      var actionMatch = checked.includes(action);
+      var searchMatch = !searchTerm || searchValue.indexOf(searchTerm) !== -1;
+      var shouldShow = actionMatch && searchMatch;
+      row.classList.toggle("jdb2xml-filter-hidden", !shouldShow);
+    });
+
+    document.querySelectorAll(".jdb2xml-article-row[data-action]").forEach(function (row) {
       var action = row.getAttribute("data-action") || "";
       var searchValue = (row.getAttribute("data-search") || "").toLowerCase();
       var actionMatch = checked.includes(action);

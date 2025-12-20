@@ -92,6 +92,7 @@ class Jdb2xmlExportHelper
             foreach ($tags as $t) {
                 $n = $xml->addChild('tag');
                 $n->addChild('id', (int) $t->id);
+                $n->addChild('parent_id', (int) ($t->parent_id ?? 1));
                 $n->addChild('title', htmlspecialchars($t->title));
                 $n->addChild('alias', htmlspecialchars($t->alias));
                 self::addCdata($n, 'description', $t->description);
@@ -111,6 +112,56 @@ class Jdb2xmlExportHelper
                 throw new RuntimeException('Cannot write tags XML');
             }
             $messages[] = basename($tagFile);
+        }
+
+        // =====================
+        // ARTICLES
+        // =====================
+        if ($type === 'all' || $type === 'articles') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->order('id ASC');
+
+            $articles = $db->setQuery($query)->loadObjectList();
+
+            $articleFile = $dir . '/articles_' . $ts . '.xml';
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><articles/>');
+
+            foreach ($articles as $a) {
+                $n = $xml->addChild('article');
+                $n->addChild('id', (int) $a->id);
+                $n->addChild('catid', (int) $a->catid);
+                $n->addChild('title', htmlspecialchars($a->title));
+                $n->addChild('alias', htmlspecialchars($a->alias));
+                self::addCdata($n, 'introtext', $a->introtext ?? '');
+                self::addCdata($n, 'fulltext', $a->fulltext ?? '');
+                $n->addChild('state', (int) $a->state);
+                $n->addChild('access', (int) $a->access);
+                $n->addChild('language', $a->language);
+                $n->addChild('created', $a->created);
+                $n->addChild('created_by', (int) $a->created_by);
+                $n->addChild('created_by_alias', htmlspecialchars($a->created_by_alias ?? ''));
+                $n->addChild('modified', $a->modified);
+                $n->addChild('modified_by', (int) $a->modified_by);
+                $n->addChild('publish_up', $a->publish_up);
+                $n->addChild('publish_down', $a->publish_down);
+                $n->addChild('ordering', (int) $a->ordering);
+                $n->addChild('featured', (int) $a->featured);
+                $n->addChild('hits', (int) $a->hits);
+                foreach (['images','urls','attribs','metadata','metadesc','metakey','note'] as $field) {
+                    self::addCdata($n, $field, $a->$field ?? '');
+                }
+            }
+
+            $xmlString = self::formatXml($xml);
+            if ($xmlString === false) {
+                throw new RuntimeException('XML generation failed (articles)');
+            }
+            if (file_put_contents($articleFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write articles XML');
+            }
+            $messages[] = basename($articleFile);
         }
 
         $suffix = $type === 'all' ? 'full' : $type;

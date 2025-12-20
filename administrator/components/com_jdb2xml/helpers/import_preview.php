@@ -28,6 +28,7 @@ class Jdb2xmlImportPreviewHelper
                 'categories' => [],
                 'categoryTree' => [],
                 'tags' => [],
+                'articles' => [],
                 'warnings' => [],
                 'hasWarnings' => false
             ];
@@ -57,6 +58,12 @@ class Jdb2xmlImportPreviewHelper
                 self::previewTags($db, $xml->tags, $result[$fileKey]);
             } elseif ($xml->getName() === 'tags') {
                 self::previewTags($db, $xml, $result[$fileKey]);
+            }
+
+            if (isset($xml->articles)) {
+                self::previewArticles($db, $xml->articles, $result[$fileKey]);
+            } elseif ($xml->getName() === 'articles') {
+                self::previewArticles($db, $xml, $result[$fileKey]);
             }
 
             // Build a tree from category paths
@@ -178,7 +185,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'update',
+                    'action' => 'changed',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -249,7 +256,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'update',
+                    'action' => 'changed',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -264,5 +271,119 @@ class Jdb2xmlImportPreviewHelper
                 ];
             }
         }
+    }
+
+    private static function previewArticles($db, $articles, array &$out): void
+    {
+        foreach ($articles->article as $node) {
+            $alias = trim((string) $node->alias);
+            $title = (string) $node->title;
+            $catid = (int) ($node->catid ?? 0);
+            $key = self::buildArticleKey($alias, $catid);
+
+            if ($alias === '' || $catid === 0) {
+                $out['warnings'][] = 'Article without alias or category skipped';
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'skipped',
+                    'reason' => 'Missing alias or category',
+                    'exclude' => true
+                ];
+                continue;
+            }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->where('alias=' . $db->quote($alias))
+                ->where('catid=' . (int) $catid);
+
+            $existing = $db->setQuery($query)->loadObject();
+
+            if (!$existing) {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'new',
+                    'reason' => '',
+                    'exclude' => false
+                ];
+                continue;
+            }
+
+            $fields = [
+                'title' => (string) ($node->title ?? ''),
+                'introtext' => (string) ($node->introtext ?? ''),
+                'fulltext' => (string) ($node->fulltext ?? ''),
+                'state' => (string) ($node->state ?? ''),
+                'access' => (string) ($node->access ?? ''),
+                'language' => (string) ($node->language ?? ''),
+                'created' => (string) ($node->created ?? ''),
+                'created_by' => (string) ($node->created_by ?? ''),
+                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'modified' => (string) ($node->modified ?? ''),
+                'modified_by' => (string) ($node->modified_by ?? ''),
+                'publish_up' => (string) ($node->publish_up ?? ''),
+                'publish_down' => (string) ($node->publish_down ?? ''),
+                'ordering' => (string) ($node->ordering ?? ''),
+                'featured' => (string) ($node->featured ?? ''),
+                'hits' => (string) ($node->hits ?? ''),
+                'images' => (string) ($node->images ?? ''),
+                'urls' => (string) ($node->urls ?? ''),
+                'attribs' => (string) ($node->attribs ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+                'metadesc' => (string) ($node->metadesc ?? ''),
+                'metakey' => (string) ($node->metakey ?? ''),
+                'note' => (string) ($node->note ?? ''),
+            ];
+
+            $hasChanges = false;
+            foreach ($fields as $field => $value) {
+                if (!property_exists($existing, $field)) {
+                    continue;
+                }
+                $dbVal = (string) ($existing->$field ?? '');
+                if ($dbVal !== $value) {
+                    $hasChanges = true;
+                    break;
+                }
+            }
+
+            if ($hasChanges) {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'changed',
+                    'reason' => '',
+                    'exclude' => false
+                ];
+            } else {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'skipped',
+                    'reason' => 'No changes detected',
+                    'exclude' => true
+                ];
+            }
+        }
+    }
+
+    private static function buildArticleKey(string $alias, int $catid): string
+    {
+        return 'article:' . $catid . ':' . $alias;
     }
 }
