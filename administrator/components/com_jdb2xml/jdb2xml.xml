@@ -4,7 +4,9 @@
   <name>JDB2XML</name>
   <element>com_jdb2xml</element>
   <menu>JDB2XML</menu>
-  <version>6.0.0</version>
+  <version>1.0.1</version>
+  <author>Robin Colbers</author>
+  <creationDate>2025-02-14</creationDate>
   <scriptfile>script.php</scriptfile>
   <administration>
     <menu>JDB2XML</menu>

@@ -3,9 +3,14 @@
 <extension type="package" version="6.0" method="upgrade">
   <name>JDB2XML</name>
   <packagename>jdb2xml</packagename>
-  <version>1.1.1-b1b2</version>
+  <version>1.0.1</version>
+  <author>Robin Colbers</author>
+  <creationDate>2025-02-14</creationDate>
   <files>
     <file type="component" id="com_jdb2xml">administrator/components/com_jdb2xml</file>
     <file type="plugin" id="jdb2xml" group="task">plugins/task/jdb2xml</file>
   </files>
+  <updateservers>
+    <server type="extension" name="JDB2XML Package Updates">https://raw.githubusercontent.com/RobinColbers/com_xmlcatag/main/updates/jdb2xml.xml</server>
+  </updateservers>
 </extension>
