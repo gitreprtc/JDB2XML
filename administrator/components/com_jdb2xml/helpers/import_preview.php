@@ -143,7 +143,7 @@ class Jdb2xmlImportPreviewHelper
             }
 
             $query = $db->getQuery(true)
-                ->select('id, description, params, metadata, metadesc, metakey, note')
+                ->select('id, title, description, params, metadata, metadesc, metakey, note')
                 ->from('#__categories')
                 ->where('path=' . $db->quote($path))
                 ->where('extension=' . $db->quote($extension));
@@ -162,6 +162,7 @@ class Jdb2xmlImportPreviewHelper
                 continue;
             }
 
+            $titleChanged = trim((string) $node->title) !== (string) ($existing->title ?? '');
             $canSupplement = false;
             foreach (['description','params','metadata','metadesc','metakey','note'] as $field) {
                 $dbVal = (string) ($existing->$field ?? '');
@@ -172,7 +173,7 @@ class Jdb2xmlImportPreviewHelper
                 }
             }
 
-            if ($canSupplement) {
+            if ($titleChanged || $canSupplement) {
                 $out['categories'][] = [
                     'type' => 'category',
                     'id' => $path,
@@ -214,7 +215,7 @@ class Jdb2xmlImportPreviewHelper
             }
 
             $query = $db->getQuery(true)
-                ->select('id, description, params, metadata')
+                ->select('id, title, description, params, metadata')
                 ->from('#__tags')
                 ->where('alias=' . $db->quote($alias));
 
@@ -232,6 +233,7 @@ class Jdb2xmlImportPreviewHelper
                 continue;
             }
 
+            $titleChanged = trim((string) $node->title) !== (string) ($existing->title ?? '');
             $canSupplement = false;
             foreach (['description','params','metadata'] as $field) {
                 $dbVal = (string) ($existing->$field ?? '');
@@ -242,7 +244,7 @@ class Jdb2xmlImportPreviewHelper
                 }
             }
 
-            if ($canSupplement) {
+            if ($titleChanged || $canSupplement) {
                 $out['tags'][] = [
                     'type' => 'tag',
                     'id' => $alias,

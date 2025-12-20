@@ -185,6 +185,13 @@ class Jdb2xmlImportHelper
                 $changed = false;
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
+                $xmlTitle = (string) ($node->title ?? '');
+                if ($xmlTitle !== '' && (string) ($existing->title ?? '') !== $xmlTitle) {
+                    $before['fields']['title'] = (string) ($existing->title ?? '');
+                    $existing->title = $xmlTitle;
+                    $changed = true;
+                }
+
                 foreach ($map as $field => $value) {
                     if ($value === '') continue;
                     if (!property_exists($existing, $field)) continue;
@@ -269,6 +276,7 @@ class Jdb2xmlImportHelper
             $existing = $db->setQuery($query)->loadObject();
 
             $map = [
+                'title'       => (string) ($node->title ?? ''),
                 'description' => (string) ($node->description ?? ''),
                 'language'    => (string) ($node->language ?? ''),
                 'params'      => (string) ($node->params ?? ''),
