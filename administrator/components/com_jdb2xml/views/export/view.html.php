@@ -23,6 +23,6 @@ class Jdb2xmlViewExport extends HtmlView
     {
         ToolbarHelper::title('JDB2XML - Export', 'stack');
         ToolbarHelper::custom('export', 'download', 'download', 'Export', false);
-        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Hoofdmenu', 'home');
+        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
     }
 }

@@ -60,10 +60,10 @@ class Jdb2xmlExportHelper
 
         $xmlString = self::formatXml($xml);
         if ($xmlString === false) {
-            throw new RuntimeException('XML generatie mislukt (categories)');
+            throw new RuntimeException('XML generation failed (categories)');
         }
         if (file_put_contents($catFile, $xmlString) === false) {
-            throw new RuntimeException('Kan categorie XML niet schrijven');
+            throw new RuntimeException('Cannot write categories XML');
         }
 
         // =====================
@@ -94,13 +94,13 @@ class Jdb2xmlExportHelper
 
         $xmlString = self::formatXml($xml);
         if ($xmlString === false) {
-            throw new RuntimeException('XML generatie mislukt (tags)');
+            throw new RuntimeException('XML generation failed (tags)');
         }
         if (file_put_contents($tagFile, $xmlString) === false) {
             throw new RuntimeException('Kan tag XML niet schrijven');
         }
 
-        return 'Export voltooid (volledig): '
+        return 'Export completed (full): '
             . basename($catFile) . ' & ' . basename($tagFile);
     }
 

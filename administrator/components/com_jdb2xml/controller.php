@@ -21,7 +21,7 @@ class Jdb2xmlController extends BaseController
         $app->setUserState('com_jdb2xml.selected_file', $selected);
 
         if (!$selected) {
-            $app->enqueueMessage('Preview geweigerd: selecteer eerst een bestand.', 'warning');
+            $app->enqueueMessage('Preview denied: select a file first.', 'warning');
             $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel&selected_file=' . urlencode($selected) . '&show_preview=1');
             return;
         }
@@ -32,7 +32,7 @@ class Jdb2xmlController extends BaseController
             $data = Jdb2xmlImportPreviewHelper::run($dir, $selected);
             $app->setUserState('com_jdb2xml.preview.' . $selected, $data);
         } catch (Throwable $e) {
-            $app->enqueueMessage('Preview fout: ' . $e->getMessage(), 'error');
+            $app->enqueueMessage('Preview error: ' . $e->getMessage(), 'error');
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel&selected_file=' . urlencode($selected) . '&show_preview=1');
@@ -46,7 +46,7 @@ class Jdb2xmlController extends BaseController
         $app->setUserState('com_jdb2xml.selected_file', $selected);
 
         if (!$selected) {
-            $app->enqueueMessage('Import geweigerd: selecteer eerst een bestand en voer een preview uit.', 'warning');
+            $app->enqueueMessage('Import denied: select a file and run a preview first.', 'warning');
             $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
             return;
         }
@@ -54,7 +54,7 @@ class Jdb2xmlController extends BaseController
         // Enforce mandatory preview per file
         $preview = $app->getUserState('com_jdb2xml.preview.' . $selected);
         if (!$preview) {
-            $app->enqueueMessage('Import geweigerd: voer eerst een preview uit voor dit bestand.', 'warning');
+            $app->enqueueMessage('Import denied: run a preview for this file first.', 'warning');
             $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
             return;
         }
@@ -71,7 +71,7 @@ class Jdb2xmlController extends BaseController
 
         $rows = $data['categories'] ?? [];
 
-        // Blocking rule: any row marked as 'overgeslagen' (skipped) must be excluded explicitly
+        // Blocking rule: any row marked as 'skipped' must be excluded explicitly
         foreach ($rows as $row) {
             $key = (string)($row['id'] ?? '');
             if (!empty($row['path'])) {
@@ -80,8 +80,8 @@ class Jdb2xmlController extends BaseController
             if ($key === '') {
                 continue;
             }
-            if (($row['action'] ?? '') === 'overgeslagen' && empty($exclude[$key])) {
-                $app->enqueueMessage('Import geblokkeerd: niet alle foutieve records zijn uitgesloten.', 'warning');
+            if (($row['action'] ?? '') === 'skipped' && empty($exclude[$key])) {
+                $app->enqueueMessage('Import blocked: not all invalid records are excluded.', 'warning');
                 $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
                 return;
             }
@@ -97,7 +97,7 @@ class Jdb2xmlController extends BaseController
             // Clear preview for this file after successful import
             $app->setUserState('com_jdb2xml.preview.' . $selected, null);
         } catch (Throwable $e) {
-            $app->enqueueMessage('Import fout: ' . $e->getMessage(), 'error');
+            $app->enqueueMessage('Import error: ' . $e->getMessage(), 'error');
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
@@ -112,7 +112,7 @@ class Jdb2xmlController extends BaseController
 
         if ($file && is_file($path)) {
             unlink($path);
-            $app->enqueueMessage('Bestand verwijderd: ' . $file, 'message');
+            $app->enqueueMessage('File deleted: ' . $file, 'message');
         }
 
         // Remove preview so UI refreshes
@@ -172,7 +172,7 @@ class Jdb2xmlController extends BaseController
                 $app->enqueueMessage($result['warning'], 'warning');
             }
         } catch (Throwable $e) {
-            $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
+            $app->enqueueMessage('Rollback error: ' . $e->getMessage(), 'error');
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=rollback');
@@ -198,7 +198,7 @@ class Jdb2xmlController extends BaseController
             $result = Jdb2xmlExportHelper::run(JPATH_ROOT . '/media/com_jdb2xml/export');
             $app->enqueueMessage($result, 'message');
         } catch (Throwable $e) {
-            $app->enqueueMessage('Export fout: ' . $e->getMessage(), 'error');
+            $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');

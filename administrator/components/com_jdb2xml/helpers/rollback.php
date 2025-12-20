@@ -42,7 +42,7 @@ class Jdb2xmlRollbackHelper
     {
         $type = $type === 'tags' ? 'tags' : 'categories';
         if ($targetFile === '') {
-            return ['message' => 'Geen rollback-log geselecteerd.', 'warning' => null];
+            return ['message' => 'No rollback log selected.', 'warning' => null];
         }
 
         $logDir = JPATH_ADMINISTRATOR . '/logs';
@@ -51,14 +51,14 @@ class Jdb2xmlRollbackHelper
 
         $selectedPath = $logDir . '/' . $targetFile;
         if (!file_exists($selectedPath)) {
-            return ['message' => 'Rollback-log ontbreekt: ' . $targetFile, 'warning' => null];
+            return ['message' => 'Rollback log missing: ' . $targetFile, 'warning' => null];
         }
 
         $createdIds = array_values(array_unique(array_map('intval', $createdIds)));
         $updatedIds = array_values(array_unique(array_map('intval', $updatedIds)));
         $selectedIds = array_values(array_unique(array_merge($createdIds, $updatedIds)));
         if (empty($selectedIds)) {
-            return ['message' => 'Geen wijzigingen geselecteerd voor rollback.', 'warning' => null];
+            return ['message' => 'No changes selected for rollback.', 'warning' => null];
         }
 
         $db = Factory::getDbo();
@@ -115,7 +115,7 @@ class Jdb2xmlRollbackHelper
         }
 
         return [
-            'message' => 'Rollback uitgevoerd voor ' . $type . ': verwijderd=' . $deleted . ', teruggedraaid=' . $reverted . '.',
+            'message' => 'Rollback completed for ' . $type . ': deleted=' . $deleted . ', reverted=' . $reverted . '.',
             'warning' => $warning,
         ];
     }
@@ -240,7 +240,7 @@ class Jdb2xmlRollbackHelper
             }
             $lines[] = 'ID ' . (int)$entry['id'] . ' (' . self::formatTimestamp($entry['file']) . ')' . (!empty($fields) ? ' [' . implode(', ', $fields) . ']' : '');
         }
-        return 'Waarschuwing: er zijn latere wijzigingen gevonden die ook worden teruggedraaid: ' . implode('; ', $lines);
+        return 'Warning: later changes were found and will also be reverted: ' . implode('; ', $lines);
     }
 
     private static function markRolledBack(string $filePath, string $type, array $createdIds, array $updatedIds): void

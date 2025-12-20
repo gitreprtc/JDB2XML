@@ -5,12 +5,12 @@ defined('_JEXEC') or die;
 
 <div class="jdb2xml-landing">
   <h2>JDB2XML</h2>
-  <p>Welkom! Dit is de landingspagina. De inhoud vullen we later.</p>
+  <p>Welcome! This is the landing page. We will fill the content later.</p>
 
   <div class="jdb2xml-landing-links">
-    <a class="btn btn-primary" href="index.php?option=com_jdb2xml&view=controlpanel">Ga naar preview</a>
-    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=export">Ga naar export</a>
-    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=rollback">Ga naar rollback</a>
+    <a class="btn btn-primary" href="index.php?option=com_jdb2xml&view=controlpanel">Import</a>
+    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=export">Export</a>
+    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=rollback">Rollback</a>
   </div>
 </div>
 

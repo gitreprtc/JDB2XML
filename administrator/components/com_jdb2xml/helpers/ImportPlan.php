@@ -40,9 +40,9 @@ class Jdb2xmlImportPlan
 
     public function hasBlocking(): bool
     {
-        // Blocking = any record with action 'overgeslagen' and exclude=false
+        // Blocking = any record with action 'skipped' and exclude=false
         foreach (array_merge($this->categories, $this->tags) as $r) {
-            if (($r['action'] ?? '') === 'overgeslagen' && empty($r['exclude'])) {
+            if (($r['action'] ?? '') === 'skipped' && empty($r['exclude'])) {
                 return true;
             }
         }

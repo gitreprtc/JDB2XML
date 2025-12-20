@@ -18,7 +18,7 @@ class Jdb2xmlImportHelper
     {
         $lock = JPATH_ADMINISTRATOR . '/cache/jdb2xml_import.lock';
         if (!is_dir(dirname($lock))) @mkdir(dirname($lock), 0755, true);
-        if (file_exists($lock)) return 'Import afgebroken: lock actief.';
+        if (file_exists($lock)) return 'Import aborted: lock active.';
         @file_put_contents($lock, (string) time());
 
         // Rollback log (only when not dry-run)
@@ -95,7 +95,7 @@ class Jdb2xmlImportHelper
             if ($selectedFile) {
                 $path = $dir . '/' . basename($selectedFile);
                 if (!is_file($path)) {
-                    throw new RuntimeException('Bestand niet gevonden in import map: ' . $path);
+                    throw new RuntimeException('File not found in import folder: ' . $path);
                 }
                 $files = [$path];
             }
@@ -104,15 +104,15 @@ class Jdb2xmlImportHelper
                     return isset($planMap[basename($f)]);
                 }));
             }
-            if (!$files) return 'Geen XML-bestanden gevonden.';
+            if (!$files) return 'No XML files found.';
 
             foreach ($files as $file) {
                 try {
                     $xmlString = file_get_contents($file);
-                    if (!$xmlString) throw new RuntimeException('Leeg bestand');
+                    if (!$xmlString) throw new RuntimeException('Empty file');
                     libxml_use_internal_errors(true);
                     $xml = simplexml_load_string($xmlString);
-                    if (!$xml) throw new RuntimeException('Ongeldige XML');
+                    if (!$xml) throw new RuntimeException('Invalid XML');
 
                     if (isset($xml->categories)) {
                         self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
@@ -142,11 +142,11 @@ class Jdb2xmlImportHelper
             }
 
             $msg = [];
-            $msg[] = 'Import afgerond' . ($dryRun ? ' (dry-run)' : '') . '.';
-            $msg[] = 'Categorieën: nieuw=' . $createdCats . ', aangevuld=' . $updatedCats . ', overgeslagen=' . $skippedCats;
-            $msg[] = 'Tags: nieuw=' . $createdTags . ', aangevuld=' . $updatedTags . ', overgeslagen=' . $skippedTags;
-            if ($warnings) $msg[] = 'Waarschuwingen: ' . implode(' | ', array_unique($warnings));
-            if (!$dryRun && $rollbackFile) $msg[] = 'Rollback-log: ' . basename($rollbackFile);
+            $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
+            $msg[] = 'Categories: new=' . $createdCats . ', updated=' . $updatedCats . ', skipped=' . $skippedCats;
+            $msg[] = 'Tags: new=' . $createdTags . ', updated=' . $updatedTags . ', skipped=' . $skippedTags;
+            if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
+            if (!$dryRun && $rollbackFile) $msg[] = 'Rollback log: ' . basename($rollbackFile);
             return implode(' ', $msg);
         } finally {
             @unlink($lock);
@@ -243,10 +243,10 @@ class Jdb2xmlImportHelper
             $table->bind($data);
             $table->setLocation($parentId, 'last-child');
             if (!$table->check()) {
-                throw new RuntimeException('Categorie check mislukt: ' . $table->getError());
+                throw new RuntimeException('Category check failed: ' . $table->getError());
             }
             if (!$table->store()) {
-                throw new RuntimeException('Categorie opslaan mislukt: ' . $table->getError());
+                throw new RuntimeException('Category save failed: ' . $table->getError());
             }
             if (method_exists($table, 'rebuildPath')) {
                 $table->rebuildPath($table->id);
@@ -326,10 +326,10 @@ class Jdb2xmlImportHelper
             $table->bind($data);
             $table->setLocation(1, 'last-child');
             if (!$table->check()) {
-                throw new RuntimeException('Tag check mislukt: ' . $table->getError());
+                throw new RuntimeException('Tag check failed: ' . $table->getError());
             }
             if (!$table->store()) {
-                throw new RuntimeException('Tag opslaan mislukt: ' . $table->getError());
+                throw new RuntimeException('Tag save failed: ' . $table->getError());
             }
 
             $rollback['created']['tags'][] = (int) $table->id;

@@ -11,7 +11,7 @@ class Jdb2xmlImportPreviewHelper
     public static function run(string $dir, ?string $selectedFile = null): array
     {
         if (!is_dir($dir)) {
-            throw new RuntimeException('Import map bestaat niet: ' . $dir);
+            throw new RuntimeException('Import folder does not exist: ' . $dir);
         }
 
         $db = Factory::getDbo();
@@ -34,7 +34,7 @@ class Jdb2xmlImportPreviewHelper
 
             $xmlString = file_get_contents($file);
             if (!$xmlString) {
-                $result[$fileKey]['warnings'][] = 'Bestand is leeg of niet leesbaar';
+                $result[$fileKey]['warnings'][] = 'File is empty or not readable';
                 $result[$fileKey]['hasWarnings'] = true;
                 continue;
             }
@@ -42,7 +42,7 @@ class Jdb2xmlImportPreviewHelper
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlString);
             if (!$xml) {
-                $result[$fileKey]['warnings'][] = 'Ongeldige XML';
+                $result[$fileKey]['warnings'][] = 'Invalid XML';
                 $result[$fileKey]['hasWarnings'] = true;
                 continue;
             }
@@ -130,13 +130,13 @@ class Jdb2xmlImportPreviewHelper
             $path = trim((string) $node->path);
 
             if ($path === '') {
-                $out['warnings'][] = 'Categorie zonder path overgeslagen';
+                $out['warnings'][] = 'Category without path skipped';
                 $out['categories'][] = [
                     'type' => 'category',
                     'id' => '',
                     'title' => (string) $node->title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Ontbrekende path',
+                    'action' => 'skipped',
+                    'reason' => 'Missing path',
                     'exclude' => true
                 ];
                 continue;
@@ -155,7 +155,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'nieuw',
+                    'action' => 'new',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -186,8 +186,8 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Geen lege velden om aan te vullen',
+                    'action' => 'skipped',
+                    'reason' => 'No empty fields to fill',
                     'exclude' => true
                 ];
             }
@@ -201,13 +201,13 @@ class Jdb2xmlImportPreviewHelper
             $title = (string) $node->title;
 
             if ($alias === '') {
-                $out['warnings'][] = 'Tag zonder alias overgeslagen';
+                $out['warnings'][] = 'Tag without alias skipped';
                 $out['tags'][] = [
                     'type' => 'tag',
                     'id' => '',
                     'title' => $title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Ontbrekende alias',
+                    'action' => 'skipped',
+                    'reason' => 'Missing alias',
                     'exclude' => true
                 ];
                 continue;
@@ -225,7 +225,7 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'nieuw',
+                    'action' => 'new',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -256,8 +256,8 @@ class Jdb2xmlImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Geen lege velden om aan te vullen',
+                    'action' => 'skipped',
+                    'reason' => 'No empty fields to fill',
                     'exclude' => true
                 ];
             }

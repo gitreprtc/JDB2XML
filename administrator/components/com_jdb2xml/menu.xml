@@ -6,7 +6,7 @@
       JDB2XML
     </menu>
     <menu link="index.php?option=com_jdb2xml&view=controlpanel" view="controlpanel">
-      Preview
+      Import
     </menu>
     <menu link="index.php?option=com_jdb2xml&view=export" view="export">
       Export

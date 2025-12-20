@@ -13,9 +13,9 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 <div class="jdb2xml">
   <h2>Rollback</h2>
   <div class="jdb2xml-section">
-    <h3>Categorieën</h3>
+    <h3>Categories</h3>
     <?php if (empty($rollbackCategories)): ?>
-      <div class="jdb2xml-empty">Geen herstelpunten voor categorieën.</div>
+      <div class="jdb2xml-empty">No restore points for categories.</div>
     <?php else: ?>
       <?php foreach ($rollbackCategories as $log): ?>
         <?php
@@ -38,7 +38,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
           $entities = Jdb2xmlRollbackHelper::fetchEntities('categories', $entityIds);
         ?>
         <details class="jdb2xml-rollback-item">
-          <summary>Herstelpunt <?php echo htmlspecialchars($log['label'], ENT_QUOTES, 'UTF-8'); ?></summary>
+          <summary>Restore point <?php echo htmlspecialchars($log['label'], ENT_QUOTES, 'UTF-8'); ?></summary>
           <form action="index.php?option=com_jdb2xml" method="post" class="jdb2xml-rollback-form">
             <input type="hidden" name="task" value="rollbackapply">
             <input type="hidden" name="rollback_type" value="categories">
@@ -47,9 +47,9 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
             <table class="jdb2xml-table">
               <thead>
                 <tr>
-                  <th class="jdb2xml-head-check">Actie</th>
-                  <th class="jdb2xml-head-title">Titel</th>
-                  <th>Pad</th>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Path</th>
                   <th></th>
                   <th></th>
                 </tr>
@@ -66,7 +66,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                                name="rollback_items[created][]"
                                value="<?php echo (int)$item['id']; ?>"
                                <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
-                        <span>Aangemaakt</span>
+                        <span>Created</span>
                       </label>
                     </td>
                     <td class="jdb2xml-cell jdb2xml-title">
@@ -80,7 +80,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                     <td class="jdb2xml-cell jdb2xml-actions"></td>
                     <td class="jdb2xml-cell jdb2xml-badge-cell">
                       <?php if ($item['rolled_back']): ?>
-                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback uitgevoerd</span>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -102,7 +102,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                                name="rollback_items[updated][]"
                                value="<?php echo (int)$item['id']; ?>"
                                <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
-                        <span>Gewijzigd</span>
+                        <span>Updated</span>
                       </label>
                     </td>
                     <td class="jdb2xml-cell jdb2xml-title">
@@ -119,7 +119,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                     <td class="jdb2xml-cell jdb2xml-actions"></td>
                     <td class="jdb2xml-cell jdb2xml-badge-cell">
                       <?php if ($item['rolled_back']): ?>
-                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback uitgevoerd</span>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -127,7 +127,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
               </tbody>
             </table>
             <button type="submit" class="btn btn-warning" <?php echo $hasSelectable ? '' : 'disabled'; ?>>
-              Rollback deze wijziging
+              Rollback selected changes
             </button>
           </form>
         </details>
@@ -138,7 +138,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
   <div class="jdb2xml-section">
     <h3>Tags</h3>
     <?php if (empty($rollbackTags)): ?>
-      <div class="jdb2xml-empty">Geen herstelpunten voor tags.</div>
+      <div class="jdb2xml-empty">No restore points for tags.</div>
     <?php else: ?>
       <?php foreach ($rollbackTags as $log): ?>
         <?php
@@ -161,7 +161,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
           $entities = Jdb2xmlRollbackHelper::fetchEntities('tags', $entityIds);
         ?>
         <details class="jdb2xml-rollback-item">
-          <summary>Herstelpunt <?php echo htmlspecialchars($log['label'], ENT_QUOTES, 'UTF-8'); ?></summary>
+          <summary>Restore point <?php echo htmlspecialchars($log['label'], ENT_QUOTES, 'UTF-8'); ?></summary>
           <form action="index.php?option=com_jdb2xml" method="post" class="jdb2xml-rollback-form">
             <input type="hidden" name="task" value="rollbackapply">
             <input type="hidden" name="rollback_type" value="tags">
@@ -170,9 +170,9 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
             <table class="jdb2xml-table">
               <thead>
                 <tr>
-                  <th class="jdb2xml-head-check">Actie</th>
-                  <th class="jdb2xml-head-title">Titel</th>
-                  <th>Pad</th>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Path</th>
                   <th></th>
                   <th></th>
                 </tr>
@@ -189,7 +189,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                                name="rollback_items[created][]"
                                value="<?php echo (int)$item['id']; ?>"
                                <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
-                        <span>Aangemaakt</span>
+                        <span>Created</span>
                       </label>
                     </td>
                     <td class="jdb2xml-cell jdb2xml-title">
@@ -203,7 +203,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                     <td class="jdb2xml-cell jdb2xml-actions"></td>
                     <td class="jdb2xml-cell jdb2xml-badge-cell">
                       <?php if ($item['rolled_back']): ?>
-                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback uitgevoerd</span>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -225,7 +225,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                                name="rollback_items[updated][]"
                                value="<?php echo (int)$item['id']; ?>"
                                <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
-                        <span>Gewijzigd</span>
+                        <span>Updated</span>
                       </label>
                     </td>
                     <td class="jdb2xml-cell jdb2xml-title">
@@ -242,7 +242,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
                     <td class="jdb2xml-cell jdb2xml-actions"></td>
                     <td class="jdb2xml-cell jdb2xml-badge-cell">
                       <?php if ($item['rolled_back']): ?>
-                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback uitgevoerd</span>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -250,7 +250,7 @@ $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
               </tbody>
             </table>
             <button type="submit" class="btn btn-warning" <?php echo $hasSelectable ? '' : 'disabled'; ?>>
-              Rollback deze wijziging
+              Rollback selected changes
             </button>
           </form>
         </details>
