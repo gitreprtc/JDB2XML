@@ -36,6 +36,9 @@ defined('_JEXEC') or die;
             $dayRaw = $schedule[$key] ?? [];
             $day = is_object($dayRaw) ? (array) $dayRaw : (array) $dayRaw;
             $interval = (int) ($day['interval_minutes'] ?? 60);
+            if ($interval < 10) {
+                $interval = 10;
+            }
             $timeFrom = (string) ($day['time_from'] ?? '00:00');
             $timeTo = (string) ($day['time_to'] ?? '23:59');
           ?>
@@ -43,7 +46,7 @@ defined('_JEXEC') or die;
             <span class="jdb2xml-import-schedule-day"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></span>
             <input type="number"
                    name="import_schedule[<?php echo $key; ?>][interval_minutes]"
-                   min="1"
+                   min="10"
                    value="<?php echo (int) $interval; ?>">
             <input type="time"
                    name="import_schedule[<?php echo $key; ?>][time_from]"

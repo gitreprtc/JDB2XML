@@ -79,7 +79,7 @@ class Jdb2xml extends TaskPlugin
         $dayRaw = $schedule[$dayKey] ?? [];
         $day = is_object($dayRaw) ? (array) $dayRaw : (array) $dayRaw;
 
-        $intervalMinutes = max(1, (int) ($day['interval_minutes'] ?? 0));
+        $intervalMinutes = max(10, (int) ($day['interval_minutes'] ?? 0));
         $timeFrom = $day['time_from'] ?? '00:00';
         $timeTo = $day['time_to'] ?? '23:59';
 

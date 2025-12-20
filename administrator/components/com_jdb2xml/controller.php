@@ -277,7 +277,7 @@ class Jdb2xmlController extends BaseController
         $schedule = [];
         foreach ($validWeekdays as $day) {
             $dayInput = $scheduleInput[$day] ?? [];
-            $interval = max(1, (int) ($dayInput['interval_minutes'] ?? 60));
+            $interval = max(10, (int) ($dayInput['interval_minutes'] ?? 60));
             $timeFrom = (string) ($dayInput['time_from'] ?? '00:00');
             $timeTo = (string) ($dayInput['time_to'] ?? '23:59');
             $schedule[$day] = [
@@ -317,7 +317,7 @@ class Jdb2xmlController extends BaseController
         $schedule = [];
         foreach ($validWeekdays as $day) {
             $dayInput = $scheduleInput[$day] ?? [];
-            $interval = max(1, (int) ($dayInput['interval_minutes'] ?? 60));
+            $interval = max(10, (int) ($dayInput['interval_minutes'] ?? 60));
             $timeFrom = (string) ($dayInput['time_from'] ?? '00:00');
             $timeTo = (string) ($dayInput['time_to'] ?? '23:59');
             $schedule[$day] = [
@@ -384,6 +384,9 @@ class Jdb2xmlController extends BaseController
         $taskId = (int) $db->setQuery($query)->loadResult();
 
         $fields = [];
+        if (isset($columns['asset_id'])) {
+            $fields['asset_id'] = 0;
+        }
         if (isset($columns['title'])) {
             $fields['title'] = $title;
         }

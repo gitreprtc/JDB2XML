@@ -62,6 +62,9 @@ defined('_JEXEC') or die;
             $interval = isset($day['interval_minutes'])
               ? (int) $day['interval_minutes']
               : (int) (($day['interval_hours'] ?? 1) * 60);
+            if ($interval < 10) {
+                $interval = 10;
+            }
             $timeFrom = (string) ($day['time_from'] ?? '00:00');
             $timeTo = (string) ($day['time_to'] ?? '23:59');
           ?>
@@ -69,7 +72,7 @@ defined('_JEXEC') or die;
             <span class="jdb2xml-export-schedule-day"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></span>
             <input type="number"
                    name="export_schedule[<?php echo $key; ?>][interval_minutes]"
-                   min="1"
+                   min="10"
                    value="<?php echo (int) $interval; ?>">
             <input type="time"
                    name="export_schedule[<?php echo $key; ?>][time_from]"
