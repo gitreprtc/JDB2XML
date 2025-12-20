@@ -310,6 +310,7 @@ class Jdb2xmlImportHelper
 
             if ($existing) {
                 $changedLocal = false;
+                $parentChange = false;
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
                 foreach ($map as $field => $value) {
@@ -320,12 +321,36 @@ class Jdb2xmlImportHelper
                         $before['fields'][$field] = $dbVal;
                         $existing->$field = $value;
                         $changedLocal = true;
+                        if ($field === 'parent_id' && $value !== '') {
+                            $parentChange = true;
+                        }
                     }
                 }
 
                 if ($changedLocal) {
                     if (!$dryRun) {
-                        $db->updateObject('#__tags', $existing, 'id');
+                        if ($parentChange) {
+                            Table::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_tags/tables');
+                            $table = Table::getInstance('Tag', 'TagsTable');
+                            if ($table === false || !$table->load((int) $existing->id)) {
+                                throw new RuntimeException('Tag-table kan niet worden geladen');
+                            }
+                            foreach ($map as $field => $value) {
+                                if ($value === '') {
+                                    continue;
+                                }
+                                $table->$field = $existing->$field;
+                            }
+                            $table->setLocation((int) $existing->parent_id, 'last-child');
+                            if (!$table->check()) {
+                                throw new RuntimeException('Tag check failed: ' . $table->getError());
+                            }
+                            if (!$table->store()) {
+                                throw new RuntimeException('Tag save failed: ' . $table->getError());
+                            }
+                        } else {
+                            $db->updateObject('#__tags', $existing, 'id');
+                        }
                         $rollback['updated']['tags'][] = $before;
                     }
                     $changed++;
