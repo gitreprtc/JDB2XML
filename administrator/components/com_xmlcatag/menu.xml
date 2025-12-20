@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu>
-  <submenu>
-    <menu link="index.php?option=com_xmlcatag" view="controlpanel">
-      XML Cat/Tag
-    </menu>
-  </submenu>
-</menu>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="task" method="upgrade">
+  <name>Task - JDB2XML</name>
+  <version>1.0.1</version>
+  <author>Robin Colbers</author>
+  <creationDate>2025-02-14</creationDate>
+  <description>Scheduled tasks for JDB2XML import/export.</description>
+  <namespace path="src">Joomla\Plugin\Task\Jdb2xml</namespace>
+  <files>
+    <filename plugin="jdb2xml">jdb2xml.php</filename>
+    <folder>src</folder>
+  </files>
+  <updateservers>
+    <server type="extension" name="JDB2XML Plugin Updates">https://raw.githubusercontent.com/RobinColbers/com_xmlcatag/main/updates/jdb2xml.xml</server>
+  </updateservers>
+</extension>

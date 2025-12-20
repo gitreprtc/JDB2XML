@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<updates>
+  <update>
+    <name>JDB2XML Package</name>
+    <description>Package update for the JDB2XML component and task plugin.</description>
+    <element>pkg_jdb2xml</element>
+    <type>package</type>
+    <version>1.0.1</version>
+    <client>administrator</client>
+    <downloads>
+      <downloadurl type="full" format="zip">https://github.com/RobinColbers/com_xmlcatag/archive/refs/heads/main.zip</downloadurl>
+    </downloads>
+    <targetplatform name="joomla" version="4.0"/>
+  </update>
+  <update>
+    <name>Task - JDB2XML</name>
+    <description>Task plugin update for JDB2XML.</description>
+    <element>jdb2xml</element>
+    <type>plugin</type>
+    <folder>task</folder>
+    <version>1.0.1</version>
+    <client>administrator</client>
+    <downloads>
+      <downloadurl type="full" format="zip">https://github.com/RobinColbers/com_xmlcatag/archive/refs/heads/main.zip</downloadurl>
+    </downloads>
+    <targetplatform name="joomla" version="4.0"/>
+  </update>
+</updates>

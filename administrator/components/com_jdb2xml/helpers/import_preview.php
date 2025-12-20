@@ -1,20 +1,25 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 
 require_once __DIR__ . '/ImportPlan.php';
 
-class XmlcatagImportPreviewHelper
+class Jdb2xmlImportPreviewHelper
 {
     public static function run(string $dir, ?string $selectedFile = null): array
     {
         if (!is_dir($dir)) {
-            throw new RuntimeException('Import map bestaat niet: ' . $dir);
+            throw new RuntimeException('Import folder does not exist: ' . $dir);
         }
 
         $db = Factory::getDbo();
         $files = glob($dir . '/*.xml') ?: [];
+        if ($selectedFile) {
+            $path = $dir . '/' . basename($selectedFile);
+            $files = is_file($path) ? [$path] : [];
+        }
         $result = [];
 
         foreach ($files as $file) {
@@ -23,13 +28,14 @@ class XmlcatagImportPreviewHelper
                 'categories' => [],
                 'categoryTree' => [],
                 'tags' => [],
+                'articles' => [],
                 'warnings' => [],
                 'hasWarnings' => false
             ];
 
             $xmlString = file_get_contents($file);
             if (!$xmlString) {
-                $result[$fileKey]['warnings'][] = 'Bestand is leeg of niet leesbaar';
+                $result[$fileKey]['warnings'][] = 'File is empty or not readable';
                 $result[$fileKey]['hasWarnings'] = true;
                 continue;
             }
@@ -37,7 +43,7 @@ class XmlcatagImportPreviewHelper
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlString);
             if (!$xml) {
-                $result[$fileKey]['warnings'][] = 'Ongeldige XML';
+                $result[$fileKey]['warnings'][] = 'Invalid XML';
                 $result[$fileKey]['hasWarnings'] = true;
                 continue;
             }
@@ -52,6 +58,12 @@ class XmlcatagImportPreviewHelper
                 self::previewTags($db, $xml->tags, $result[$fileKey]);
             } elseif ($xml->getName() === 'tags') {
                 self::previewTags($db, $xml, $result[$fileKey]);
+            }
+
+            if (isset($xml->articles)) {
+                self::previewArticles($db, $xml->articles, $result[$fileKey]);
+            } elseif ($xml->getName() === 'articles') {
+                self::previewArticles($db, $xml, $result[$fileKey]);
             }
 
             // Build a tree from category paths
@@ -125,20 +137,20 @@ class XmlcatagImportPreviewHelper
             $path = trim((string) $node->path);
 
             if ($path === '') {
-                $out['warnings'][] = 'Categorie zonder path overgeslagen';
+                $out['warnings'][] = 'Category without path skipped';
                 $out['categories'][] = [
                     'type' => 'category',
                     'id' => '',
                     'title' => (string) $node->title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Ontbrekende path',
+                    'action' => 'skipped',
+                    'reason' => 'Missing path',
                     'exclude' => true
                 ];
                 continue;
             }
 
             $query = $db->getQuery(true)
-                ->select('id, description, params, metadata, metadesc, metakey, note')
+                ->select('id, title, description, params, metadata, metadesc, metakey, note')
                 ->from('#__categories')
                 ->where('path=' . $db->quote($path))
                 ->where('extension=' . $db->quote($extension));
@@ -150,13 +162,14 @@ class XmlcatagImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'nieuw',
+                    'action' => 'new',
                     'reason' => '',
                     'exclude' => false
                 ];
                 continue;
             }
 
+            $titleChanged = trim((string) $node->title) !== (string) ($existing->title ?? '');
             $canSupplement = false;
             foreach (['description','params','metadata','metadesc','metakey','note'] as $field) {
                 $dbVal = (string) ($existing->$field ?? '');
@@ -167,12 +180,12 @@ class XmlcatagImportPreviewHelper
                 }
             }
 
-            if ($canSupplement) {
+            if ($titleChanged || $canSupplement) {
                 $out['categories'][] = [
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'aanvullen',
+                    'action' => 'changed',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -181,8 +194,8 @@ class XmlcatagImportPreviewHelper
                     'type' => 'category',
                     'id' => $path,
                     'title' => (string) $node->title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Geen lege velden om aan te vullen',
+                    'action' => 'skipped',
+                    'reason' => 'No empty fields to fill',
                     'exclude' => true
                 ];
             }
@@ -196,20 +209,20 @@ class XmlcatagImportPreviewHelper
             $title = (string) $node->title;
 
             if ($alias === '') {
-                $out['warnings'][] = 'Tag zonder alias overgeslagen';
+                $out['warnings'][] = 'Tag without alias skipped';
                 $out['tags'][] = [
                     'type' => 'tag',
                     'id' => '',
                     'title' => $title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Ontbrekende alias',
+                    'action' => 'skipped',
+                    'reason' => 'Missing alias',
                     'exclude' => true
                 ];
                 continue;
             }
 
             $query = $db->getQuery(true)
-                ->select('id, description, params, metadata')
+                ->select('id, title, description, params, metadata')
                 ->from('#__tags')
                 ->where('alias=' . $db->quote($alias));
 
@@ -220,13 +233,14 @@ class XmlcatagImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'nieuw',
+                    'action' => 'new',
                     'reason' => '',
                     'exclude' => false
                 ];
                 continue;
             }
 
+            $titleChanged = trim((string) $node->title) !== (string) ($existing->title ?? '');
             $canSupplement = false;
             foreach (['description','params','metadata'] as $field) {
                 $dbVal = (string) ($existing->$field ?? '');
@@ -237,12 +251,12 @@ class XmlcatagImportPreviewHelper
                 }
             }
 
-            if ($canSupplement) {
+            if ($titleChanged || $canSupplement) {
                 $out['tags'][] = [
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'aanvullen',
+                    'action' => 'changed',
                     'reason' => '',
                     'exclude' => false
                 ];
@@ -251,11 +265,125 @@ class XmlcatagImportPreviewHelper
                     'type' => 'tag',
                     'id' => $alias,
                     'title' => $title,
-                    'action' => 'overgeslagen',
-                    'reason' => 'Geen lege velden om aan te vullen',
+                    'action' => 'skipped',
+                    'reason' => 'No empty fields to fill',
                     'exclude' => true
                 ];
             }
         }
+    }
+
+    private static function previewArticles($db, $articles, array &$out): void
+    {
+        foreach ($articles->article as $node) {
+            $alias = trim((string) $node->alias);
+            $title = (string) $node->title;
+            $catid = (int) ($node->catid ?? 0);
+            $key = self::buildArticleKey($alias, $catid);
+
+            if ($alias === '' || $catid === 0) {
+                $out['warnings'][] = 'Article without alias or category skipped';
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'skipped',
+                    'reason' => 'Missing alias or category',
+                    'exclude' => true
+                ];
+                continue;
+            }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->where('alias=' . $db->quote($alias))
+                ->where('catid=' . (int) $catid);
+
+            $existing = $db->setQuery($query)->loadObject();
+
+            if (!$existing) {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'new',
+                    'reason' => '',
+                    'exclude' => false
+                ];
+                continue;
+            }
+
+            $fields = [
+                'title' => (string) ($node->title ?? ''),
+                'introtext' => (string) ($node->introtext ?? ''),
+                'fulltext' => (string) ($node->fulltext ?? ''),
+                'state' => (string) ($node->state ?? ''),
+                'access' => (string) ($node->access ?? ''),
+                'language' => (string) ($node->language ?? ''),
+                'created' => (string) ($node->created ?? ''),
+                'created_by' => (string) ($node->created_by ?? ''),
+                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'modified' => (string) ($node->modified ?? ''),
+                'modified_by' => (string) ($node->modified_by ?? ''),
+                'publish_up' => (string) ($node->publish_up ?? ''),
+                'publish_down' => (string) ($node->publish_down ?? ''),
+                'ordering' => (string) ($node->ordering ?? ''),
+                'featured' => (string) ($node->featured ?? ''),
+                'hits' => (string) ($node->hits ?? ''),
+                'images' => (string) ($node->images ?? ''),
+                'urls' => (string) ($node->urls ?? ''),
+                'attribs' => (string) ($node->attribs ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+                'metadesc' => (string) ($node->metadesc ?? ''),
+                'metakey' => (string) ($node->metakey ?? ''),
+                'note' => (string) ($node->note ?? ''),
+            ];
+
+            $hasChanges = false;
+            foreach ($fields as $field => $value) {
+                if (!property_exists($existing, $field)) {
+                    continue;
+                }
+                $dbVal = (string) ($existing->$field ?? '');
+                if ($dbVal !== $value) {
+                    $hasChanges = true;
+                    break;
+                }
+            }
+
+            if ($hasChanges) {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'changed',
+                    'reason' => '',
+                    'exclude' => false
+                ];
+            } else {
+                $out['articles'][] = [
+                    'type' => 'article',
+                    'id' => $key,
+                    'title' => $title,
+                    'alias' => $alias,
+                    'catid' => $catid,
+                    'action' => 'skipped',
+                    'reason' => 'No changes detected',
+                    'exclude' => true
+                ];
+            }
+        }
+    }
+
+    private static function buildArticleKey(string $alias, int $catid): string
+    {
+        return 'article:' . $catid . ':' . $alias;
     }
 }
