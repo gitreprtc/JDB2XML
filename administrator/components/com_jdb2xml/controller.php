@@ -4,9 +4,12 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Application\CMSApplicationInterface;
+use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
+use Joomla\CMS\Table\Table;
+use Joomla\Registry\Registry;
 
 class Jdb2xmlController extends BaseController
 {
@@ -233,10 +236,61 @@ class Jdb2xmlController extends BaseController
         $app = $this->getApplicationWithTokenCheck();
 
         try {
-            $result = Jdb2xmlExportHelper::run(JPATH_ROOT . '/media/com_jdb2xml/export');
+            $result = Jdb2xmlExportHelper::runType(JPATH_ROOT . '/media/com_jdb2xml/export', 'all');
             $app->enqueueMessage($result, 'message');
         } catch (Throwable $e) {
             $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function exportmanual()
+    {
+        require_once __DIR__ . '/helpers/export.php';
+        $app = $this->getApplicationWithTokenCheck();
+        $type = $app->input->getCmd('export_type', 'all');
+        if (!in_array($type, ['categories', 'tags'], true)) {
+            $type = 'all';
+        }
+
+        try {
+            $result = Jdb2xmlExportHelper::runType(JPATH_ROOT . '/media/com_jdb2xml/export', $type);
+            $app->enqueueMessage($result, 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function saveexportschedule()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $weekday = $app->input->getCmd('export_weekday', 'monday');
+        $interval = max(1, (int) $app->input->getInt('export_interval_hours', 24));
+        $timeFrom = $app->input->getString('export_time_from', '00:00');
+        $timeTo = $app->input->getString('export_time_to', '23:59');
+
+        $validWeekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        if (!in_array($weekday, $validWeekdays, true)) {
+            $weekday = 'monday';
+        }
+
+        $component = ComponentHelper::getComponent('com_jdb2xml');
+        $table = Table::getInstance('extension');
+        $table->load($component->id);
+        $params = new Registry($table->params);
+        $params->set('export_weekday', $weekday);
+        $params->set('export_interval_hours', $interval);
+        $params->set('export_time_from', $timeFrom);
+        $params->set('export_time_to', $timeTo);
+        $table->params = $params->toString();
+
+        if (!$table->check() || !$table->store()) {
+            $app->enqueueMessage('Failed to save export schedule settings.', 'error');
+        } else {
+            $app->enqueueMessage('Export schedule settings saved.', 'message');
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');

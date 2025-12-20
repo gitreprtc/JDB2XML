@@ -8,100 +8,113 @@ class Jdb2xmlExportHelper
 {
     public static function run(string $dir): string
     {
+        return self::runType($dir, 'all');
+    }
+
+    public static function runType(string $dir, string $type): string
+    {
+        if (!is_dir($dir)) @mkdir($dir, 0755, true);
         $db = Factory::getDbo();
         $ts = date('Ymd_His');
+        $messages = [];
 
         // =====================
         // CATEGORIES
         // =====================
-        $query = $db->getQuery(true)
-            ->select('*')
-            ->from('#__categories')
-            ->order('lft ASC');
+        if ($type === 'all' || $type === 'categories') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__categories')
+                ->order('lft ASC');
 
-        $cats = $db->setQuery($query)->loadObjectList();
+            $cats = $db->setQuery($query)->loadObjectList();
 
-        $catFile = $dir . '/categories_' . $ts . '.xml';
+            $catFile = $dir . '/categories_' . $ts . '.xml';
 
-        $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><categories/>');
-        $xml->addAttribute('extension', 'com_content');
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><categories/>');
+            $xml->addAttribute('extension', 'com_content');
 
-        foreach ($cats as $c) {
-            $n = $xml->addChild('category');
+            foreach ($cats as $c) {
+                $n = $xml->addChild('category');
 
-            // structure
-            $n->addChild('id', (int) $c->id);
-            $n->addChild('parent_id', (int) $c->parent_id);
-            $n->addChild('level', (int) $c->level);
-            $n->addChild('path', $c->path);
+                // structure
+                $n->addChild('id', (int) $c->id);
+                $n->addChild('parent_id', (int) $c->parent_id);
+                $n->addChild('level', (int) $c->level);
+                $n->addChild('path', $c->path);
 
-            // content
-            $n->addChild('title', htmlspecialchars($c->title));
-            $n->addChild('alias', htmlspecialchars($c->alias));
+                // content
+                $n->addChild('title', htmlspecialchars($c->title));
+                $n->addChild('alias', htmlspecialchars($c->alias));
 
-            self::addCdata($n, 'description', $c->description);
+                self::addCdata($n, 'description', $c->description);
 
-            // state
-            $n->addChild('published', (int) $c->published);
-            $n->addChild('access', (int) $c->access);
-            $n->addChild('language', $c->language);
+                // state
+                $n->addChild('published', (int) $c->published);
+                $n->addChild('access', (int) $c->access);
+                $n->addChild('language', $c->language);
 
-            // params & metadata
-            foreach (['params','metadata','metadesc','metakey','note'] as $field) {
-                self::addCdata($n, $field, $c->$field ?? '');
+                // params & metadata
+                foreach (['params','metadata','metadesc','metakey','note'] as $field) {
+                    self::addCdata($n, $field, $c->$field ?? '');
+                }
+
+                // audit
+                $n->addChild('created_user_id', (int) $c->created_user_id);
+                $n->addChild('created_time', $c->created_time);
+                $n->addChild('modified_user_id', (int) $c->modified_user_id);
+                $n->addChild('modified_time', $c->modified_time);
             }
 
-            // audit
-            $n->addChild('created_user_id', (int) $c->created_user_id);
-            $n->addChild('created_time', $c->created_time);
-            $n->addChild('modified_user_id', (int) $c->modified_user_id);
-            $n->addChild('modified_time', $c->modified_time);
-        }
-
-        $xmlString = self::formatXml($xml);
-        if ($xmlString === false) {
-            throw new RuntimeException('XML generation failed (categories)');
-        }
-        if (file_put_contents($catFile, $xmlString) === false) {
-            throw new RuntimeException('Cannot write categories XML');
+            $xmlString = self::formatXml($xml);
+            if ($xmlString === false) {
+                throw new RuntimeException('XML generation failed (categories)');
+            }
+            if (file_put_contents($catFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write categories XML');
+            }
+            $messages[] = basename($catFile);
         }
 
         // =====================
         // TAGS
         // =====================
-        $query = $db->getQuery(true)
-            ->select('*')->from('#__tags')
-            ->order('title ASC');
+        if ($type === 'all' || $type === 'tags') {
+            $query = $db->getQuery(true)
+                ->select('*')->from('#__tags')
+                ->order('title ASC');
 
-        $tags = $db->setQuery($query)->loadObjectList();
+            $tags = $db->setQuery($query)->loadObjectList();
 
-        $tagFile = $dir . '/tags_' . $ts . '.xml';
-        $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><tags/>');
+            $tagFile = $dir . '/tags_' . $ts . '.xml';
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><tags/>');
 
-        foreach ($tags as $t) {
-            $n = $xml->addChild('tag');
-            $n->addChild('id', (int) $t->id);
-            $n->addChild('title', htmlspecialchars($t->title));
-            $n->addChild('alias', htmlspecialchars($t->alias));
-            self::addCdata($n, 'description', $t->description);
-            foreach (['params','metadata'] as $field) {
-                self::addCdata($n, $field, $t->$field ?? '');
+            foreach ($tags as $t) {
+                $n = $xml->addChild('tag');
+                $n->addChild('id', (int) $t->id);
+                $n->addChild('title', htmlspecialchars($t->title));
+                $n->addChild('alias', htmlspecialchars($t->alias));
+                self::addCdata($n, 'description', $t->description);
+                foreach (['params','metadata'] as $field) {
+                    self::addCdata($n, $field, $t->$field ?? '');
+                }
+                $n->addChild('published', (int) $t->published);
+                $n->addChild('access', (int) $t->access);
+                $n->addChild('language', $t->language);
             }
-            $n->addChild('published', (int) $t->published);
-            $n->addChild('access', (int) $t->access);
-            $n->addChild('language', $t->language);
+
+            $xmlString = self::formatXml($xml);
+            if ($xmlString === false) {
+                throw new RuntimeException('XML generation failed (tags)');
+            }
+            if (file_put_contents($tagFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write tags XML');
+            }
+            $messages[] = basename($tagFile);
         }
 
-        $xmlString = self::formatXml($xml);
-        if ($xmlString === false) {
-            throw new RuntimeException('XML generation failed (tags)');
-        }
-        if (file_put_contents($tagFile, $xmlString) === false) {
-            throw new RuntimeException('Kan tag XML niet schrijven');
-        }
-
-        return 'Export completed (full): '
-            . basename($catFile) . ' & ' . basename($tagFile);
+        $suffix = $type === 'all' ? 'full' : $type;
+        return 'Export completed (' . $suffix . '): ' . implode(' & ', $messages);
     }
 
     private static function addCdata(SimpleXMLElement $node, string $name, string $value): void
