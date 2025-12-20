@@ -299,7 +299,7 @@ class Jdb2xmlController extends BaseController
         } else {
             $app->enqueueMessage('Export schedule settings saved.', 'message');
             $this->upsertSchedulerTask(
-                'com_jdb2xml.export',
+                'export',
                 'JDB2XML Export',
                 ['schedule' => $schedule],
                 ['rule' => 'interval', 'interval' => 1, 'unit' => 'minute']
@@ -339,7 +339,7 @@ class Jdb2xmlController extends BaseController
         } else {
             $app->enqueueMessage('Import schedule settings saved.', 'message');
             $this->upsertSchedulerTask(
-                'com_jdb2xml.importautomatic',
+                'import',
                 'JDB2XML Automatic Import',
                 ['schedule' => $schedule],
                 ['rule' => 'interval', 'interval' => 1, 'unit' => 'minute']
@@ -415,6 +415,9 @@ class Jdb2xmlController extends BaseController
         }
         if (isset($columns['modified_by'])) {
             $fields['modified_by'] = $userId;
+        }
+        if (isset($columns['next_execution'])) {
+            $fields['next_execution'] = $now;
         }
 
         if ($taskId > 0) {
