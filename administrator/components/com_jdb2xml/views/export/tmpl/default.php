@@ -42,18 +42,37 @@ defined('_JEXEC') or die;
       <input type="hidden" name="task" value="saveexportschedule">
       <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
       <div class="jdb2xml-export-grid">
-        <label>
-          Weekday
-          <select name="export_weekday">
-            <option value="monday" <?php echo $weekday === 'monday' ? 'selected' : ''; ?>>Monday</option>
-            <option value="tuesday" <?php echo $weekday === 'tuesday' ? 'selected' : ''; ?>>Tuesday</option>
-            <option value="wednesday" <?php echo $weekday === 'wednesday' ? 'selected' : ''; ?>>Wednesday</option>
-            <option value="thursday" <?php echo $weekday === 'thursday' ? 'selected' : ''; ?>>Thursday</option>
-            <option value="friday" <?php echo $weekday === 'friday' ? 'selected' : ''; ?>>Friday</option>
-            <option value="saturday" <?php echo $weekday === 'saturday' ? 'selected' : ''; ?>>Saturday</option>
-            <option value="sunday" <?php echo $weekday === 'sunday' ? 'selected' : ''; ?>>Sunday</option>
-          </select>
-        </label>
+        <div class="jdb2xml-export-weekdays">
+          <span class="jdb2xml-export-weekday-label">Weekday</span>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="monday" <?php echo $weekday === 'monday' ? 'checked' : ''; ?>>
+            Monday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="tuesday" <?php echo $weekday === 'tuesday' ? 'checked' : ''; ?>>
+            Tuesday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="wednesday" <?php echo $weekday === 'wednesday' ? 'checked' : ''; ?>>
+            Wednesday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="thursday" <?php echo $weekday === 'thursday' ? 'checked' : ''; ?>>
+            Thursday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="friday" <?php echo $weekday === 'friday' ? 'checked' : ''; ?>>
+            Friday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="saturday" <?php echo $weekday === 'saturday' ? 'checked' : ''; ?>>
+            Saturday
+          </label>
+          <label class="jdb2xml-export-weekday-option">
+            <input type="radio" name="export_weekday" value="sunday" <?php echo $weekday === 'sunday' ? 'checked' : ''; ?>>
+            Sunday
+          </label>
+        </div>
         <label>
           Every (hours)
           <input type="number" name="export_interval_hours" min="1" value="<?php echo (int) $interval; ?>">
@@ -85,4 +104,7 @@ defined('_JEXEC') or die;
 .jdb2xml-export-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .jdb2xml-export-grid label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
 .jdb2xml-export-note { color: #666; font-size: 12px; margin-top: 8px; }
+.jdb2xml-export-weekdays { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.jdb2xml-export-weekday-label { font-weight: 600; }
+.jdb2xml-export-weekday-option { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
 </style>
