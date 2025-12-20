@@ -23,8 +23,6 @@ class Jdb2xmlViewControlpanel extends HtmlView
             .jdb2xml-node.mixed::after{content:"gemengd";font-size:inherit;color:inherit;margin-left:8px;}
             #toolbar-preview .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
             #toolbar-import .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
-            #toolbar-export .btn{background:#1976d2;border-color:#1976d2;color:#fff;}
-            #toolbar-rollback .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
             #toolbar-resetpreview .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
             #toolbar-refreshsftp .btn{background:#f39c12;border-color:#f39c12;color:#fff;}
         ');
@@ -108,10 +106,6 @@ class Jdb2xmlViewControlpanel extends HtmlView
         ToolbarHelper::custom('preview', 'search', 'search', 'Preview', false);
         ToolbarHelper::custom('resetpreview', 'refresh', 'refresh', 'Reset preview', false);
         ToolbarHelper::custom('import', 'upload', 'upload', 'Import', false);
-        ToolbarHelper::custom('export', 'download', 'download', 'Export', false);
-
-        ToolbarHelper::divider();
         ToolbarHelper::custom('refreshsftp', 'refresh', 'refresh', 'Refresh SFTP', false);
-        ToolbarHelper::custom('rollback', 'undo', 'undo', 'Rollback', false);
     }
 }

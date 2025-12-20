@@ -10,7 +10,7 @@ use Joomla\CMS\Session\Session;
 
 class Jdb2xmlController extends BaseController
 {
-    protected $default_view = 'controlpanel';
+    protected $default_view = 'landing';
 
     public function preview()
     {
@@ -22,7 +22,7 @@ class Jdb2xmlController extends BaseController
 
         if (!$selected) {
             $app->enqueueMessage('Preview geweigerd: selecteer eerst een bestand.', 'warning');
-            $this->setRedirect('index.php?option=com_jdb2xml&selected_file=' . urlencode($selected) . '&show_preview=1');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel&selected_file=' . urlencode($selected) . '&show_preview=1');
             return;
         }
 
@@ -35,7 +35,7 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Preview fout: ' . $e->getMessage(), 'error');
         }
 
-        $this->setRedirect('index.php?option=com_jdb2xml&selected_file=' . urlencode($selected) . '&show_preview=1');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel&selected_file=' . urlencode($selected) . '&show_preview=1');
     }
 
     public function import()
@@ -47,7 +47,7 @@ class Jdb2xmlController extends BaseController
 
         if (!$selected) {
             $app->enqueueMessage('Import geweigerd: selecteer eerst een bestand en voer een preview uit.', 'warning');
-            $this->setRedirect('index.php?option=com_jdb2xml');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
             return;
         }
 
@@ -55,7 +55,7 @@ class Jdb2xmlController extends BaseController
         $preview = $app->getUserState('com_jdb2xml.preview.' . $selected);
         if (!$preview) {
             $app->enqueueMessage('Import geweigerd: voer eerst een preview uit voor dit bestand.', 'warning');
-            $this->setRedirect('index.php?option=com_jdb2xml');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
             return;
         }
 
@@ -82,7 +82,7 @@ class Jdb2xmlController extends BaseController
             }
             if (($row['action'] ?? '') === 'overgeslagen' && empty($exclude[$key])) {
                 $app->enqueueMessage('Import geblokkeerd: niet alle foutieve records zijn uitgesloten.', 'warning');
-                $this->setRedirect('index.php?option=com_jdb2xml');
+                $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
                 return;
             }
         }
@@ -100,7 +100,7 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Import fout: ' . $e->getMessage(), 'error');
         }
 
-        $this->setRedirect('index.php?option=com_jdb2xml');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
     }
 
     public function deletefile()
@@ -117,21 +117,20 @@ class Jdb2xmlController extends BaseController
 
         // Remove preview so UI refreshes
         $app->setUserState('com_jdb2xml.preview', null);
-        $this->setRedirect('index.php?option=com_jdb2xml');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
     }
 
     public function rollback()
     {
         $app = $this->getApplicationWithTokenCheck();
-        $app->setUserState('com_jdb2xml.show_rollback', 1);
-        $this->setRedirect('index.php?option=com_jdb2xml&show_rollback=1');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=rollback');
     }
 
     public function refreshsftp()
     {
         $app = $this->getApplicationWithTokenCheck();
         $app->setUserState('com_jdb2xml.selected_file', '');
-        $this->setRedirect('index.php?option=com_jdb2xml');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
     }
 
     public function listfiles()
@@ -170,7 +169,7 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Rollback fout: ' . $e->getMessage(), 'error');
         }
 
-        $this->setRedirect('index.php?option=com_jdb2xml&show_rollback=1');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=rollback');
     }
 
     public function resetpreview()
@@ -181,7 +180,7 @@ class Jdb2xmlController extends BaseController
             $app->setUserState('com_jdb2xml.preview.' . $selected, null);
         }
         $app->setUserState('com_jdb2xml.selected_file', '');
-        $this->setRedirect('index.php?option=com_jdb2xml');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=controlpanel');
     }
 
     public function export()
@@ -196,7 +195,7 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Export fout: ' . $e->getMessage(), 'error');
         }
 
-        $this->setRedirect('index.php?option=com_jdb2xml');
+        $this->setRedirect('index.php?option=com_jdb2xml&view=export');
     }
 
     protected function getApplicationWithTokenCheck(): CMSApplicationInterface
