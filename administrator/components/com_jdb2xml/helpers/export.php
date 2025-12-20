@@ -117,6 +117,28 @@ class Jdb2xmlExportHelper
         return 'Export completed (' . $suffix . '): ' . implode(' & ', $messages);
     }
 
+    public static function logBatch(string $type, bool $success, ?string $error = null): void
+    {
+        $logFile = JPATH_ADMINISTRATOR . '/logs/jdb2xml_export_batches.json';
+        $entries = [];
+        if (is_file($logFile)) {
+            $data = json_decode(file_get_contents($logFile), true);
+            if (is_array($data)) {
+                $entries = $data;
+            }
+        }
+
+        $entries[] = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'type' => $type,
+            'status' => $success ? 'success' : 'failed',
+            'error' => $error,
+        ];
+
+        $entries = array_slice($entries, -10);
+        file_put_contents($logFile, json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
     private static function addCdata(SimpleXMLElement $node, string $name, string $value): void
     {
         $child = $node->addChild($name);

@@ -239,8 +239,10 @@ class Jdb2xmlController extends BaseController
         try {
             $result = Jdb2xmlExportHelper::runType(JPATH_ROOT . '/media/com_jdb2xml/export', 'all');
             $app->enqueueMessage($result, 'message');
+            Jdb2xmlExportHelper::logBatch('all', true);
         } catch (Throwable $e) {
             $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+            Jdb2xmlExportHelper::logBatch('all', false, $e->getMessage());
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
@@ -258,8 +260,10 @@ class Jdb2xmlController extends BaseController
         try {
             $result = Jdb2xmlExportHelper::runType(JPATH_ROOT . '/media/com_jdb2xml/export', $type);
             $app->enqueueMessage($result, 'message');
+            Jdb2xmlExportHelper::logBatch($type, true);
         } catch (Throwable $e) {
             $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+            Jdb2xmlExportHelper::logBatch($type, false, $e->getMessage());
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
@@ -268,24 +272,26 @@ class Jdb2xmlController extends BaseController
     public function saveexportschedule()
     {
         $app = $this->getApplicationWithTokenCheck();
-        $weekday = $app->input->getCmd('export_weekday', 'monday');
-        $interval = max(1, (int) $app->input->getInt('export_interval_hours', 24));
-        $timeFrom = $app->input->getString('export_time_from', '00:00');
-        $timeTo = $app->input->getString('export_time_to', '23:59');
-
+        $scheduleInput = $app->input->get('export_schedule', [], 'array');
         $validWeekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
-        if (!in_array($weekday, $validWeekdays, true)) {
-            $weekday = 'monday';
+        $schedule = [];
+        foreach ($validWeekdays as $day) {
+            $dayInput = $scheduleInput[$day] ?? [];
+            $interval = max(1, (int) ($dayInput['interval_hours'] ?? 24));
+            $timeFrom = (string) ($dayInput['time_from'] ?? '00:00');
+            $timeTo = (string) ($dayInput['time_to'] ?? '23:59');
+            $schedule[$day] = [
+                'interval_hours' => $interval,
+                'time_from' => $timeFrom,
+                'time_to' => $timeTo,
+            ];
         }
 
         $component = ComponentHelper::getComponent('com_jdb2xml');
         $table = Table::getInstance('extension');
         $table->load($component->id);
         $params = new Registry($table->params);
-        $params->set('export_weekday', $weekday);
-        $params->set('export_interval_hours', $interval);
-        $params->set('export_time_from', $timeFrom);
-        $params->set('export_time_to', $timeTo);
+        $params->set('export_schedule', $schedule);
         $table->params = $params->toString();
 
         if (!$table->check() || !$table->store()) {

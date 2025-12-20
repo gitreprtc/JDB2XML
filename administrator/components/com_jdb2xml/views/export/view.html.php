@@ -17,6 +17,14 @@ class Jdb2xmlViewExport extends HtmlView
             #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
         ');
         $this->params = ComponentHelper::getParams('com_jdb2xml');
+        $this->batches = [];
+        $logFile = JPATH_ADMINISTRATOR . '/logs/jdb2xml_export_batches.json';
+        if (is_file($logFile)) {
+            $data = json_decode(file_get_contents($logFile), true);
+            if (is_array($data)) {
+                $this->batches = $data;
+            }
+        }
         $this->addToolbar();
         parent::display($tpl);
     }
