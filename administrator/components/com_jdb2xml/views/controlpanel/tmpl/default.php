@@ -28,7 +28,7 @@ if ($showPreview && $selected) {
 $rollbackCategories = [];
 $rollbackTags = [];
 if ($showRollback) {
-    require_once __DIR__ . '/../../helpers/rollback.php';
+    require_once __DIR__ . '/../../../helpers/rollback.php';
     $rollbackCategories = Jdb2xmlRollbackHelper::listLogsByType('categories');
     $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
 }
