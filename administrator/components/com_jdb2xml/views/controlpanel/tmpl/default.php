@@ -9,7 +9,10 @@ $app = Factory::getApplication();
 $input = $app->input;
 
 $importDir = JPATH_ROOT . '/media/com_jdb2xml/import';
-$files = is_dir($importDir) ? (glob($importDir . '/*.xml') ?: []) : [];
+if (is_dir($importDir)) {
+    clearstatcache(true, $importDir);
+}
+$files = is_dir($importDir) ? (glob($importDir . '/*.xml', GLOB_NOSORT) ?: []) : [];
 $filenames = array_map('basename', $files);
 
 $selected = basename((string) $input->getString('selected_file', (string) $app->getUserState('com_jdb2xml.selected_file', '')));
