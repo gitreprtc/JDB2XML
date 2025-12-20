@@ -1,11 +1,12 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 
 require_once __DIR__ . '/ImportPlan.php';
 
-class XmlcatagImportPreviewHelper
+class Jdb2xmlImportPreviewHelper
 {
     public static function run(string $dir, ?string $selectedFile = null): array
     {
@@ -15,6 +16,10 @@ class XmlcatagImportPreviewHelper
 
         $db = Factory::getDbo();
         $files = glob($dir . '/*.xml') ?: [];
+        if ($selectedFile) {
+            $path = $dir . '/' . basename($selectedFile);
+            $files = is_file($path) ? [$path] : [];
+        }
         $result = [];
 
         foreach ($files as $file) {

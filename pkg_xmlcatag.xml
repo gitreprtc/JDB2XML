@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<extension type="package" version="6.0" method="upgrade">
-  <name>PKG_XMLCATAG</name>
-  <packagename>xmlcatag</packagename>
-  <version>1.1.1-b1b2</version>
-  <files>
-    <file type="component" id="com_xmlcatag">administrator/components/com_xmlcatag</file>
-  </files>
-</extension>

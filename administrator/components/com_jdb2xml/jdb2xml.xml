@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright Robin Colbers. -->
 <extension type="component" version="6.0" method="upgrade">
-  <name>COM_XMLCATAG</name>
-  <element>com_xmlcatag</element>
-  <menu>XML Cat/Tag</menu>
+  <name>JDB2XML</name>
+  <element>com_jdb2xml</element>
+  <menu>JDB2XML</menu>
   <version>6.0.0</version>
+  <scriptfile>script.php</scriptfile>
   <administration>
-    <menu>XML Cat/Tag</menu>
-    <files folder="administrator/components/com_xmlcatag">
-      <filename>xmlcatag.php</filename>
+    <menu>JDB2XML</menu>
+    <files folder="administrator/components/com_jdb2xml">
+      <filename>jdb2xml.php</filename>
       <filename>controller.php</filename>
       <filename>menu.xml</filename>
+      <filename>script.php</filename>
       <folder>models</folder>
       <folder>views</folder>
       <folder>helpers</folder>

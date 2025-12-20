@@ -1,9 +1,10 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 
-class XmlcatagExportHelper
+class Jdb2xmlExportHelper
 {
     public static function run(string $dir): string
     {
@@ -57,7 +58,7 @@ class XmlcatagExportHelper
             $n->addChild('modified_time', $c->modified_time);
         }
 
-        $xmlString = $xml->asXML();
+        $xmlString = self::formatXml($xml);
         if ($xmlString === false) {
             throw new RuntimeException('XML generatie mislukt (categories)');
         }
@@ -66,7 +67,7 @@ class XmlcatagExportHelper
         }
 
         // =====================
-        // TAGS (unchanged)
+        // TAGS
         // =====================
         $query = $db->getQuery(true)
             ->select('*')->from('#__tags')
@@ -91,7 +92,7 @@ class XmlcatagExportHelper
             $n->addChild('language', $t->language);
         }
 
-        $xmlString = $xml->asXML();
+        $xmlString = self::formatXml($xml);
         if ($xmlString === false) {
             throw new RuntimeException('XML generatie mislukt (tags)');
         }
@@ -109,5 +110,15 @@ class XmlcatagExportHelper
         $dom = dom_import_simplexml($child);
         $owner = $dom->ownerDocument;
         $dom->appendChild($owner->createCDATASection($value));
+    }
+
+    private static function formatXml(SimpleXMLElement $xml): string
+    {
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml->asXML());
+
+        return $dom->saveXML();
     }
 }

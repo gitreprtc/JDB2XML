@@ -1,4 +1,5 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 /**
@@ -7,7 +8,7 @@ defined('_JEXEC') or die;
  *
  * Legacy-friendly (Joomla 4/5 compatible) without relying on autoloading.
  */
-class XmlcatagImportPlan
+class Jdb2xmlImportPlan
 {
     public string $fileKey;
     /** @var array<int,array> */

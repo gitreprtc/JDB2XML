@@ -1,4 +1,5 @@
 <?php
+// Copyright Robin Colbers.
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
@@ -6,7 +7,7 @@ use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
 
-class XmlcatagImportHelper
+class Jdb2xmlImportHelper
 {
     public static function runSingle(string $dir, string $selectedFile, bool $dryRun = false, array $exclude = []): string
     {
@@ -15,7 +16,7 @@ class XmlcatagImportHelper
 
     public static function run(string $dir, bool $dryRun = false, array $exclude = [], ?string $selectedFile = null): string
     {
-        $lock = JPATH_ADMINISTRATOR . '/cache/xmlcatag_import.lock';
+        $lock = JPATH_ADMINISTRATOR . '/cache/jdb2xml_import.lock';
         if (!is_dir(dirname($lock))) @mkdir(dirname($lock), 0755, true);
         if (file_exists($lock)) return 'Import afgebroken: lock actief.';
         @file_put_contents($lock, (string) time());
@@ -30,7 +31,7 @@ class XmlcatagImportHelper
         if (!$dryRun) {
             $logDir = JPATH_ADMINISTRATOR . '/logs';
             if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-            $rollbackFile = $logDir . '/xmlcatag_rollback_' . date('Ymd_His') . '.json';
+            $rollbackFile = $logDir . '/jdb2xml_rollback_' . date('Ymd_His') . '.json';
         }
 
         $processedDir = $dir . '/processed';
@@ -44,12 +45,12 @@ class XmlcatagImportHelper
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
-        $preview = $app->getUserState('com_xmlcatag.preview');
+        $preview = $app->getUserState('com_jdb2xml.preview');
         $planMap = [];
         if (is_array($preview)) {
             foreach ($preview as $fileKey => $data) {
                 if (isset($data['_plan']) && is_array($data['_plan'])) {
-                    $planMap[$fileKey] = XmlcatagImportPlan::fromArray($data['_plan']);
+                    $planMap[$fileKey] = Jdb2xmlImportPlan::fromArray($data['_plan']);
                 }
             }
         }
@@ -65,6 +66,25 @@ class XmlcatagImportHelper
                 $parts = explode('|', $k);
                 $tail = end($parts);
                 if ($tail !== '') $excludeSet[$tail] = true;
+            }
+        }
+
+        // If preview exists for selected file, only import categories included in preview
+        $allowedCategorySet = null;
+        $allowTags = true;
+        if ($selectedFile && is_array($preview)) {
+            $previewData = $preview[$selectedFile] ?? null;
+            if (is_array($previewData)) {
+                $allowedCategorySet = [];
+                $rows = $previewData['categories'] ?? [];
+                foreach ($rows as $row) {
+                    $key = (string)($row['path'] ?? $row['id'] ?? '');
+                    if ($key === '' || isset($excludeSet[$key])) {
+                        continue;
+                    }
+                    $allowedCategorySet[$key] = true;
+                }
+                $allowTags = !empty($previewData['tags']) && is_array($previewData['tags']);
             }
         }
 
@@ -95,15 +115,17 @@ class XmlcatagImportHelper
                     if (!$xml) throw new RuntimeException('Ongeldige XML');
 
                     if (isset($xml->categories)) {
-                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback);
+                        self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     } elseif ($xml->getName() === 'categories') {
-                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback);
+                        self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $updatedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
-                    if (isset($xml->tags)) {
-                        self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
-                    } elseif ($xml->getName() === 'tags') {
-                        self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                    if ($allowTags) {
+                        if (isset($xml->tags)) {
+                            self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                        } elseif ($xml->getName() === 'tags') {
+                            self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $updatedTags, $skippedTags, $warnings, $rollback);
+                        }
                     }
 
                     if (!$dryRun) @rename($file, $processedDir . '/' . basename($file));
@@ -116,7 +138,7 @@ class XmlcatagImportHelper
             if (!$dryRun && $rollbackFile) {
                 file_put_contents($rollbackFile, json_encode($rollback, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
                 // store pointer to latest rollback file
-                file_put_contents(JPATH_ADMINISTRATOR . '/cache/xmlcatag_last_rollback.txt', basename($rollbackFile));
+                file_put_contents(JPATH_ADMINISTRATOR . '/cache/jdb2xml_last_rollback.txt', basename($rollbackFile));
             }
 
             $msg = [];
@@ -131,13 +153,14 @@ class XmlcatagImportHelper
         }
     }
 
-    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback): void
+    private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$updated, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
         $extension = (string) ($categories['extension'] ?? 'com_content');
 
         foreach ($categories->category as $node) {
             $path = trim((string) $node->path);
             if ($path === '' || isset($exclude[$path])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$path])) { $skipped++; continue; }
 
             $query = $db->getQuery(true)
                 ->select('*')->from('#__categories')
@@ -187,6 +210,19 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
+            $parentId = 1;
+            if (strpos($path, '/') !== false) {
+                $parentPath = substr($path, 0, strrpos($path, '/'));
+                if ($parentPath !== '') {
+                    $parentQuery = $db->getQuery(true)
+                        ->select('id')
+                        ->from('#__categories')
+                        ->where('path=' . $db->quote($parentPath))
+                        ->where('extension=' . $db->quote($extension));
+                    $parentId = (int) $db->setQuery($parentQuery)->loadResult() ?: 1;
+                }
+            }
+
             $table = Table::getInstance('Category');
             $data = [
                 'title' => (string) ($node->title ?? $path),
@@ -202,11 +238,19 @@ class XmlcatagImportHelper
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
                 'note' => (string) ($node->note ?? ''),
-                'parent_id' => 1
+                'parent_id' => $parentId
             ];
             $table->bind($data);
-            $table->setLocation(1, 'last-child');
-            $table->store();
+            $table->setLocation($parentId, 'last-child');
+            if (!$table->check()) {
+                throw new RuntimeException('Categorie check mislukt: ' . $table->getError());
+            }
+            if (!$table->store()) {
+                throw new RuntimeException('Categorie opslaan mislukt: ' . $table->getError());
+            }
+            if (method_exists($table, 'rebuildPath')) {
+                $table->rebuildPath($table->id);
+            }
 
             $rollback['created']['categories'][] = (int) $table->id;
             $created++;
@@ -241,7 +285,7 @@ class XmlcatagImportHelper
                     if ($value === '') continue;
                     if (!property_exists($existing, $field)) continue;
                     $dbVal = (string) ($existing->$field ?? '');
-                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                    if ($dbVal !== $value) {
                         $before['fields'][$field] = $dbVal;
                         $existing->$field = $value;
                         $changed = true;
@@ -262,19 +306,31 @@ class XmlcatagImportHelper
 
             if ($dryRun) { $created++; continue; }
 
-            $table = Table::getInstance('Tag');
+            Table::addIncludePath(JPATH_ADMINISTRATOR . '/components/com_tags/tables');
+            $table = Table::getInstance('Tag', 'TagsTable');
+            if ($table === false) {
+                throw new RuntimeException('Tag-table kan niet worden geladen');
+            }
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
+                'path' => (string) ($node->path ?? $alias),
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
+                'parent_id' => 1,
             ];
             $table->bind($data);
-            $table->store();
+            $table->setLocation(1, 'last-child');
+            if (!$table->check()) {
+                throw new RuntimeException('Tag check mislukt: ' . $table->getError());
+            }
+            if (!$table->store()) {
+                throw new RuntimeException('Tag opslaan mislukt: ' . $table->getError());
+            }
 
             $rollback['created']['tags'][] = (int) $table->id;
             $created++;
