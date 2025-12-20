@@ -5,6 +5,7 @@
   <description>Scheduled tasks for JDB2XML import/export.</description>
   <namespace path="src">Joomla\Plugin\Task\Jdb2xml</namespace>
   <files>
+    <filename plugin="jdb2xml">jdb2xml.php</filename>
     <folder>src</folder>
   </files>
 </extension>

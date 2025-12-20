@@ -370,7 +370,8 @@ class Jdb2xmlController extends BaseController
     {
         $db = Factory::getDbo();
         $columns = $db->getTableColumns('#__scheduler_tasks');
-        $now = Factory::getDate()->toSql();
+        $now = Factory::getDate();
+        $nowSql = $now->toSql();
         $userId = Factory::getApplication()->getIdentity()->id ?? 0;
 
         $paramsJson = json_encode($params, JSON_UNESCAPED_UNICODE);
@@ -399,7 +400,7 @@ class Jdb2xmlController extends BaseController
             $fields['state'] = 1;
         }
         if (isset($columns['created'])) {
-            $fields['created'] = $now;
+            $fields['created'] = $nowSql;
         }
         if (isset($columns['created_by'])) {
             $fields['created_by'] = $userId;
@@ -408,16 +409,21 @@ class Jdb2xmlController extends BaseController
             $fields['checked_out'] = 0;
         }
         if (isset($columns['checked_out_time'])) {
-            $fields['checked_out_time'] = $now;
+            $fields['checked_out_time'] = $nowSql;
         }
         if (isset($columns['modified'])) {
-            $fields['modified'] = $now;
+            $fields['modified'] = $nowSql;
         }
         if (isset($columns['modified_by'])) {
             $fields['modified_by'] = $userId;
         }
         if (isset($columns['next_execution'])) {
-            $fields['next_execution'] = $now;
+            $intervalMinutes = 1;
+            if (($executionRules['rule'] ?? '') === 'interval') {
+                $intervalMinutes = (int) ($executionRules['interval'] ?? 1);
+            }
+            $next = (clone $now)->modify('+' . max(1, $intervalMinutes) . ' minutes');
+            $fields['next_execution'] = $next->toSql();
         }
 
         if ($taskId > 0) {
