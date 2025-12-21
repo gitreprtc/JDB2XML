@@ -5,6 +5,8 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Filesystem\Folder;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
@@ -272,6 +274,53 @@ class Jdb2xmlController extends BaseController
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function tagconversionupload()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $file = $app->input->files->get('csv_file');
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            $app->enqueueMessage('Upload failed: please select a CSV file.', 'warning');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=tagconversion');
+            return;
+        }
+
+        $extension = strtolower((string) File::getExt($file['name']));
+        if ($extension !== 'csv') {
+            $app->enqueueMessage('Upload failed: only CSV files are supported.', 'warning');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=tagconversion');
+            return;
+        }
+
+        $importDir = JPATH_ROOT . '/media/com_jdb2xml/import';
+        if (!Folder::exists($importDir)) {
+            Folder::create($importDir);
+        }
+
+        require_once __DIR__ . '/helpers/tag_conversion.php';
+
+        try {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToTagsXml($file['tmp_name']);
+            $safeBase = File::makeSafe(pathinfo((string) $file['name'], PATHINFO_FILENAME));
+            $timestamp = date('Ymd_His');
+            $filename = ($safeBase !== '' ? $safeBase . '_' : '') . 'tag_conversie_' . $timestamp . '.xml';
+
+            $targetPath = $importDir . '/' . $filename;
+            File::write($targetPath, $result['xml']);
+
+            $app->setUserState('com_jdb2xml.tagconversion.preview', [
+                'xml' => $result['xml'],
+                'filename' => $filename,
+                'count' => $result['count'],
+            ]);
+            $app->enqueueMessage('Tag conversion created ' . (int) $result['count'] . ' tags and saved ' . $filename . ' to the import folder.', 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Tag conversion error: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=tagconversion');
     }
 
     public function saveexportschedule()
