@@ -24,6 +24,14 @@ if ($showPreview && $selected) {
     $preview = $app->getUserState('com_jdb2xml.preview.' . $selected);
 }
 
+$db = Factory::getDbo();
+try {
+    $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+} catch (Throwable $e) {
+    $phocaColumns = [];
+}
+$phocaAvailable = !empty($phocaColumns);
+
 function collectActionsFromTree(array $nodes, array &$actions): void
 {
     foreach ($nodes as $n) {
@@ -37,14 +45,14 @@ function collectActionsFromTree(array $nodes, array &$actions): void
     }
 }
 
-function collectActions(array $preview): array
+function collectActions(array $preview, bool $phocaAvailable): array
 {
     $actions = [];
     foreach ($preview as $data) {
         if (!empty($data['categoryTree']) && is_array($data['categoryTree'])) {
             collectActionsFromTree($data['categoryTree'], $actions);
         }
-        if (!empty($data['phocaCategoryTree']) && is_array($data['phocaCategoryTree'])) {
+        if ($phocaAvailable && !empty($data['phocaCategoryTree']) && is_array($data['phocaCategoryTree'])) {
             collectActionsFromTree($data['phocaCategoryTree'], $actions);
         }
         if (!empty($data['tags']) && is_array($data['tags'])) {
@@ -157,7 +165,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 </div>
 
 <?php if (!empty($preview) && is_array($preview)) : ?>
-  <?php $filterActions = collectActions($preview); ?>
+  <?php $filterActions = collectActions($preview, $phocaAvailable); ?>
   <div class="jdb2xml-filters" data-jdb2xml-filters>
     <span class="jdb2xml-filter-label">Filter:</span>
     <?php foreach ($filterActions as $action) : ?>
@@ -190,7 +198,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
               $articleTree = $data['articleTree'] ?? [];
               $hasArticles = !empty($articleTree) && is_array($articleTree);
-              $hasPhoca = !empty($phocaTree) && is_array($phocaTree);
+              $hasPhoca = $phocaAvailable && !empty($phocaTree) && is_array($phocaTree);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
                   $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
