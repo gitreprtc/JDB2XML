@@ -94,7 +94,7 @@ class Jdb2xmlTagConversionHelper
         $values = array_values(array_unique($values));
         $values = array_values(array_filter($values, static function ($value) {
             $lower = mb_strtolower($value);
-            return !in_array($lower, ['land', 'provincie', 'naam'], true);
+            return !in_array($lower, ['land', 'provincie', 'naam', 'plaats'], true);
         }));
 
         if (!$values) {
