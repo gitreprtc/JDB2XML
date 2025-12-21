@@ -14,8 +14,8 @@
     <menu link="index.php?option=com_jdb2xml&view=export" view="export">
       Export
     </menu>
-    <menu link="index.php?option=com_jdb2xml&view=tagconversion" view="tagconversion">
-      Tag conversie
+    <menu link="index.php?option=com_jdb2xml&view=csvconversion" view="csvconversion">
+      CSV conversie
     </menu>
     <menu link="index.php?option=com_jdb2xml&view=rollback" view="rollback">
       Rollback

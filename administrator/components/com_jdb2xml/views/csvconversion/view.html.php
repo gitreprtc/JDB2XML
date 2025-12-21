@@ -6,15 +6,10 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\View\HtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 
-class Jdb2xmlViewTagconversion extends HtmlView
+class Jdb2xmlViewCsvconversion extends HtmlView
 {
-    public $preview;
-
     public function display($tpl = null)
     {
-        $app = Factory::getApplication();
-        $this->preview = $app->getUserState('com_jdb2xml.tagconversion.preview');
-
         $doc = Factory::getDocument();
         $doc->addStyleDeclaration('
             #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
@@ -26,7 +21,7 @@ class Jdb2xmlViewTagconversion extends HtmlView
 
     protected function addToolbar(): void
     {
-        ToolbarHelper::title('JDB2XML - Tag conversie', 'stack');
+        ToolbarHelper::title('JDB2XML - CSV conversie', 'stack');
         ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
     }
 }

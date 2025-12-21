@@ -235,6 +235,14 @@ class Jdb2xmlImportHelper
     private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
         $extension = (string) ($categories['extension'] ?? 'com_content');
+        $nodeMap = [];
+        foreach ($categories->category as $node) {
+            $nodePath = trim((string) $node->path);
+            if ($nodePath === '') {
+                continue;
+            }
+            $nodeMap[$nodePath] = $node;
+        }
 
         foreach ($categories->category as $node) {
             $path = trim((string) $node->path);
@@ -294,53 +302,94 @@ class Jdb2xmlImportHelper
                 continue;
             }
 
-            if ($dryRun) { $created++; continue; }
-
-            $parentId = 1;
-            if (strpos($path, '/') !== false) {
-                $parentPath = substr($path, 0, strrpos($path, '/'));
-                if ($parentPath !== '') {
-                    $parentQuery = $db->getQuery(true)
-                        ->select('id')
-                        ->from('#__categories')
-                        ->where('path=' . $db->quote($parentPath))
-                        ->where('extension=' . $db->quote($extension));
-                    $parentId = (int) $db->setQuery($parentQuery)->loadResult() ?: 1;
-                }
-            }
-
-            $table = Table::getInstance('Category');
-            $data = [
-                'title' => (string) ($node->title ?? $path),
-                'alias' => (string) ($node->alias ?? ''),
-                'path'  => $path,
-                'extension' => $extension,
-                'published' => (int) ($node->published ?? 1),
-                'access' => (int) ($node->access ?? 1),
-                'language' => (string) ($node->language ?? '*'),
-                'description' => (string) ($node->description ?? ''),
-                'params' => (string) ($node->params ?? ''),
-                'metadata' => (string) ($node->metadata ?? ''),
-                'metadesc' => (string) ($node->metadesc ?? ''),
-                'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
-                'parent_id' => $parentId
-            ];
-            $table->bind($data);
-            $table->setLocation($parentId, 'last-child');
-            if (!$table->check()) {
-                throw new RuntimeException('Category check failed: ' . $table->getError());
-            }
-            if (!$table->store()) {
-                throw new RuntimeException('Category save failed: ' . $table->getError());
-            }
-            if (method_exists($table, 'rebuildPath')) {
-                $table->rebuildPath($table->id);
-            }
-
-            $rollback['created']['categories'][] = (int) $table->id;
-            $created++;
+            self::ensureCategoryExists($db, $extension, $path, $nodeMap, $dryRun, $created, $warnings, $rollback);
         }
+    }
+
+    private static function ensureCategoryExists($db, string $extension, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int
+    {
+        if ($path === '') {
+            return 1;
+        }
+
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__categories')
+            ->where('path=' . $db->quote($path))
+            ->where('extension=' . $db->quote($extension));
+        $existingId = (int) $db->setQuery($query)->loadResult();
+        if ($existingId > 0) {
+            return $existingId;
+        }
+
+        if ($dryRun) {
+            $created++;
+            return 1;
+        }
+
+        $node = $nodeMap[$path] ?? null;
+
+        $parentId = 1;
+        if (strpos($path, '/') !== false) {
+            $parentPath = substr($path, 0, strrpos($path, '/'));
+            if ($parentPath !== '') {
+                $parentId = self::ensureCategoryExists($db, $extension, $parentPath, $nodeMap, $dryRun, $created, $warnings, $rollback);
+            }
+        }
+
+        $segment = $path;
+        if (strpos($path, '/') !== false) {
+            $segment = substr($path, strrpos($path, '/') + 1);
+        }
+
+        $titleFallback = ucwords(str_replace('-', ' ', $segment));
+        $aliasFallback = $segment;
+
+        $table = Table::getInstance('Category');
+        $nodeTitle = $node ? (string) ($node->title ?? '') : '';
+        $nodeAlias = $node ? (string) ($node->alias ?? '') : '';
+        $nodePublished = $node ? (int) ($node->published ?? 1) : 1;
+        $nodeAccess = $node ? (int) ($node->access ?? 1) : 1;
+        $nodeLanguage = $node ? (string) ($node->language ?? '*') : '*';
+        $nodeDescription = $node ? (string) ($node->description ?? '') : '';
+        $nodeParams = $node ? (string) ($node->params ?? '') : '';
+        $nodeMetadata = $node ? (string) ($node->metadata ?? '') : '';
+        $nodeMetadesc = $node ? (string) ($node->metadesc ?? '') : '';
+        $nodeMetakey = $node ? (string) ($node->metakey ?? '') : '';
+        $nodeNote = $node ? (string) ($node->note ?? '') : '';
+
+        $data = [
+            'title' => $nodeTitle !== '' ? $nodeTitle : $titleFallback,
+            'alias' => $nodeAlias !== '' ? $nodeAlias : $aliasFallback,
+            'path'  => $path,
+            'extension' => $extension,
+            'published' => $nodePublished,
+            'access' => $nodeAccess,
+            'language' => $nodeLanguage,
+            'description' => $nodeDescription,
+            'params' => $nodeParams,
+            'metadata' => $nodeMetadata,
+            'metadesc' => $nodeMetadesc,
+            'metakey' => $nodeMetakey,
+            'note' => $nodeNote,
+            'parent_id' => $parentId
+        ];
+        $table->bind($data);
+        $table->setLocation($parentId, 'last-child');
+        if (!$table->check()) {
+            throw new RuntimeException('Category check failed: ' . $table->getError());
+        }
+        if (!$table->store()) {
+            throw new RuntimeException('Category save failed: ' . $table->getError());
+        }
+        if (method_exists($table, 'rebuildPath')) {
+            $table->rebuildPath($table->id);
+        }
+
+        $rollback['created']['categories'][] = (int) $table->id;
+        $created++;
+
+        return (int) $table->id;
     }
 
     private static function importPhocaGalleryCategories(
