@@ -92,6 +92,10 @@ class Jdb2xmlTagConversionHelper
             return $value !== '';
         }));
         $values = array_values(array_unique($values));
+        $values = array_values(array_filter($values, static function ($value) {
+            $lower = mb_strtolower($value);
+            return !in_array($lower, ['land', 'provincie', 'naam'], true);
+        }));
 
         if (!$values) {
             return;

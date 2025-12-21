@@ -310,12 +310,8 @@ class Jdb2xmlController extends BaseController
             $targetPath = $importDir . '/' . $filename;
             File::write($targetPath, $result['xml']);
 
-            $app->setUserState('com_jdb2xml.tagconversion.preview', [
-                'xml' => $result['xml'],
-                'filename' => $filename,
-                'count' => $result['count'],
-            ]);
             $app->enqueueMessage('Tag conversion created ' . (int) $result['count'] . ' tags and saved ' . $filename . ' to the import folder.', 'message');
+            $app->setUserState('com_jdb2xml.tagconversion.preview', null);
         } catch (Throwable $e) {
             $app->enqueueMessage('Tag conversion error: ' . $e->getMessage(), 'error');
         }
