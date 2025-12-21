@@ -4,6 +4,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\OutputFilter;
+use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
@@ -174,10 +175,14 @@ class Jdb2xmlImportHelper
                         }
                     }
 
-                    if (!$dryRun) @rename($file, $processedDir . '/' . basename($file));
+                    if (!$dryRun) {
+                        self::moveFile($file, $processedDir);
+                    }
                 } catch (Throwable $e) {
                     $warnings[] = basename($file) . ': ' . $e->getMessage();
-                    if (!$dryRun) @rename($file, $failedDir . '/' . basename($file));
+                    if (!$dryRun) {
+                        self::moveFile($file, $failedDir);
+                    }
                 }
             }
 
@@ -198,6 +203,32 @@ class Jdb2xmlImportHelper
             return implode(' ', $msg);
         } finally {
             @unlink($lock);
+        }
+    }
+
+    private static function moveFile(string $source, string $targetDir): void
+    {
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0755, true);
+        }
+
+        $base = basename($source);
+        $target = $targetDir . '/' . $base;
+
+        if (is_file($target)) {
+            $name = pathinfo($base, PATHINFO_FILENAME);
+            $ext = pathinfo($base, PATHINFO_EXTENSION);
+            $counter = 1;
+            do {
+                $suffix = '_' . $counter;
+                $candidate = $name . $suffix . ($ext !== '' ? '.' . $ext : '');
+                $target = $targetDir . '/' . $candidate;
+                $counter++;
+            } while (is_file($target));
+        }
+
+        if (!File::move($source, $target)) {
+            @rename($source, $target);
         }
     }
 

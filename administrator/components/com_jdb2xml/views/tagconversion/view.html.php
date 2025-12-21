@@ -1,0 +1,32 @@
+<?php
+// Copyright Robin Colbers.
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\MVC\View\HtmlView;
+use Joomla\CMS\Toolbar\ToolbarHelper;
+
+class Jdb2xmlViewTagconversion extends HtmlView
+{
+    public $preview;
+
+    public function display($tpl = null)
+    {
+        $app = Factory::getApplication();
+        $this->preview = $app->getUserState('com_jdb2xml.tagconversion.preview');
+
+        $doc = Factory::getDocument();
+        $doc->addStyleDeclaration('
+            #toolbar-home .btn{background:#2e7d32;border-color:#2e7d32;color:#fff;}
+        ');
+
+        $this->addToolbar();
+        parent::display($tpl);
+    }
+
+    protected function addToolbar(): void
+    {
+        ToolbarHelper::title('JDB2XML - Tag conversie', 'stack');
+        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
+    }
+}
