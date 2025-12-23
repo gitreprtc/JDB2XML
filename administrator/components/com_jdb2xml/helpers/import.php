@@ -660,6 +660,10 @@ class Jdb2xmlImportHelper
             $publishUp = Factory::getDate()->setTime(0, 0, 0)->toSql();
             $noteText = 'Uploaded by JDB2XML';
             $nullPublishDown = null;
+            $userId = (int) Factory::getUser()->id;
+            $defaultAccess = 1;
+            $defaultLanguage = '*';
+            $defaultState = 1;
 
             if ($alias === '' || $catid === 0) {
                 $skipped++;
@@ -679,14 +683,14 @@ class Jdb2xmlImportHelper
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
                 'fulltext' => (string) ($node->fulltext ?? ''),
-                'state' => (string) ($node->state ?? ''),
-                'access' => (string) ($node->access ?? ''),
-                'language' => (string) ($node->language ?? ''),
+                'state' => (string) $defaultState,
+                'access' => (string) $defaultAccess,
+                'language' => (string) $defaultLanguage,
                 'created' => $now,
-                'created_by' => (string) ($node->created_by ?? ''),
-                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'created_by' => (string) $userId,
+                'created_by_alias' => '',
                 'modified' => $now,
-                'modified_by' => (string) ($node->modified_by ?? ''),
+                'modified_by' => (string) $userId,
                 'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'ordering' => (string) ($node->ordering ?? ''),
@@ -722,8 +726,13 @@ class Jdb2xmlImportHelper
                         $db->updateObject('#__content', $existing, 'id');
                         $override = (object) [
                             'id' => (int) $existing->id,
+                            'state' => $defaultState,
+                            'access' => $defaultAccess,
+                            'language' => $defaultLanguage,
                             'created' => $now,
+                            'created_by' => $userId,
                             'modified' => $now,
+                            'modified_by' => $userId,
                             'publish_up' => $publishUp,
                             'publish_down' => $nullPublishDown,
                             'note' => $noteText,
@@ -750,14 +759,14 @@ class Jdb2xmlImportHelper
                 'catid' => $catid,
                 'introtext' => (string) ($node->introtext ?? ''),
                 'fulltext' => (string) ($node->fulltext ?? ''),
-                'state' => (int) ($node->state ?? 1),
-                'access' => (int) ($node->access ?? 1),
-                'language' => (string) ($node->language ?? '*'),
+                'state' => $defaultState,
+                'access' => $defaultAccess,
+                'language' => $defaultLanguage,
                 'created' => $now,
-                'created_by' => (int) ($node->created_by ?? 0),
-                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
+                'created_by' => $userId,
+                'created_by_alias' => '',
                 'modified' => $now,
-                'modified_by' => (int) ($node->modified_by ?? 0),
+                'modified_by' => $userId,
                 'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
@@ -780,8 +789,13 @@ class Jdb2xmlImportHelper
             }
             $override = (object) [
                 'id' => (int) $table->id,
+                'state' => $defaultState,
+                'access' => $defaultAccess,
+                'language' => $defaultLanguage,
                 'created' => $now,
+                'created_by' => $userId,
                 'modified' => $now,
+                'modified_by' => $userId,
                 'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'note' => $noteText,
