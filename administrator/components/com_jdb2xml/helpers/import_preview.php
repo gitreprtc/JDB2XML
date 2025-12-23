@@ -316,7 +316,7 @@ class Jdb2xmlImportPreviewHelper
     private static function previewPhocaGalleryTags($db, $tags, array &$out): void
     {
         try {
-            $columns = $db->getTableColumns('#__phocagallery_tags', false);
+            $columns = $db->getTableColumns('#__phocagallery_categories', false);
         } catch (Throwable $e) {
             $columns = [];
         }
@@ -355,7 +355,7 @@ class Jdb2xmlImportPreviewHelper
 
             $query = $db->getQuery(true)
                 ->select('*')
-                ->from('#__phocagallery_tags');
+                ->from('#__phocagallery_categories');
             if ($alias !== '') {
                 $query->where('alias=' . $db->quote($alias));
             } else {

@@ -266,7 +266,7 @@ class Jdb2xmlController extends BaseController
         if ($type === 'phocagallerytags') {
             $db = Factory::getDbo();
             try {
-                $phocaColumns = $db->getTableColumns('#__phocagallery_tags', false);
+                $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
             } catch (Throwable $e) {
                 $phocaColumns = [];
             }

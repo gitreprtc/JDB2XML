@@ -73,7 +73,7 @@ class Jdb2xmlRollbackHelper
         if ($type === 'tags') {
             $table = '#__tags';
         } elseif ($type === 'phoca_tags') {
-            $table = '#__phocagallery_tags';
+            $table = '#__phocagallery_categories';
         } elseif ($type === 'articles') {
             $table = '#__content';
         } else {
@@ -145,7 +145,7 @@ class Jdb2xmlRollbackHelper
         } elseif ($type === 'phoca_tags') {
             $query = $db->getQuery(true)
                 ->select($db->quoteName(['id', 'title', 'alias']))
-                ->from($db->quoteName('#__phocagallery_tags'))
+                ->from($db->quoteName('#__phocagallery_categories'))
                 ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
         } elseif ($type === 'articles') {
             $query = $db->getQuery(true)

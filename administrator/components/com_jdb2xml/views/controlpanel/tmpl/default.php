@@ -27,7 +27,7 @@ if ($showPreview && $selected) {
 
 $db = Factory::getDbo();
 try {
-    $phocaColumns = $db->getTableColumns('#__phocagallery_tags', false);
+    $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
 } catch (Throwable $e) {
     $phocaColumns = [];
 }

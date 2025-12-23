@@ -88,7 +88,7 @@ class Jdb2xmlExportHelper
             } else {
             $query = $db->getQuery(true)
                 ->select('*')
-                ->from('#__phocagallery_tags')
+                ->from('#__phocagallery_categories')
                 ->order('ordering ASC, title ASC');
 
             $tags = $db->setQuery($query)->loadObjectList();
@@ -221,7 +221,7 @@ class Jdb2xmlExportHelper
     private static function isPhocaAvailable($db): bool
     {
         try {
-            $columns = $db->getTableColumns('#__phocagallery_tags', false);
+            $columns = $db->getTableColumns('#__phocagallery_categories', false);
         } catch (Throwable $e) {
             return false;
         }

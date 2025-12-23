@@ -435,7 +435,7 @@ class Jdb2xmlImportHelper
         array &$rollback,
         ?array $allowed = null
     ): void {
-        $columns = self::getTableColumns($db, '#__phocagallery_tags');
+        $columns = self::getTableColumns($db, '#__phocagallery_categories');
         if (empty($columns)) {
             $warnings[] = 'Phoca Gallery tags table missing.';
             return;
@@ -463,7 +463,7 @@ class Jdb2xmlImportHelper
 
             $query = $db->getQuery(true)
                 ->select('*')
-                ->from('#__phocagallery_tags');
+                ->from('#__phocagallery_categories');
             if ($alias !== '') {
                 $query->where('alias=' . $db->quote($alias));
             } else {
@@ -513,7 +513,7 @@ class Jdb2xmlImportHelper
 
                 if ($changedLocal) {
                     if (!$dryRun) {
-                        $db->updateObject('#__phocagallery_tags', $existing, 'id');
+                        $db->updateObject('#__phocagallery_categories', $existing, 'id');
                         $rollback['updated']['phoca_tags'][] = $before;
                     }
                     $changed++;
@@ -552,7 +552,7 @@ class Jdb2xmlImportHelper
             }
 
             $obj = (object) $data;
-            if (!$db->insertObject('#__phocagallery_tags', $obj)) {
+            if (!$db->insertObject('#__phocagallery_categories', $obj)) {
                 throw new RuntimeException('Phoca Gallery tag save failed');
             }
 
