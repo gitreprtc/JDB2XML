@@ -736,21 +736,21 @@ class Jdb2xmlImportHelper
             if ($table === false) {
                 throw new RuntimeException('Article-table can not be loaded');
             }
-            $created = trim((string) ($node->created ?? ''));
-            if ($created === '') {
-                $created = Factory::getDate()->toSql();
+            $createdAt = trim((string) ($node->created ?? ''));
+            if ($createdAt === '') {
+                $createdAt = Factory::getDate()->toSql();
             }
-            $modified = trim((string) ($node->modified ?? ''));
-            if ($modified === '') {
-                $modified = $nullDate;
+            $modifiedAt = trim((string) ($node->modified ?? ''));
+            if ($modifiedAt === '') {
+                $modifiedAt = $nullDate;
             }
-            $publishUp = trim((string) ($node->publish_up ?? ''));
-            if ($publishUp === '') {
-                $publishUp = $nullDate;
+            $publishUpAt = trim((string) ($node->publish_up ?? ''));
+            if ($publishUpAt === '') {
+                $publishUpAt = $nullDate;
             }
-            $publishDown = trim((string) ($node->publish_down ?? ''));
-            if ($publishDown === '') {
-                $publishDown = $nullDate;
+            $publishDownAt = trim((string) ($node->publish_down ?? ''));
+            if ($publishDownAt === '') {
+                $publishDownAt = $nullDate;
             }
             $data = [
                 'title' => (string) ($node->title ?? $alias),
@@ -761,13 +761,13 @@ class Jdb2xmlImportHelper
                 'state' => (int) ($node->state ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
-                'created' => $created,
+                'created' => $createdAt,
                 'created_by' => (int) ($node->created_by ?? 0),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => $modified,
+                'modified' => $modifiedAt,
                 'modified_by' => (int) ($node->modified_by ?? 0),
-                'publish_up' => $publishUp,
-                'publish_down' => $publishDown,
+                'publish_up' => $publishUpAt,
+                'publish_down' => $publishDownAt,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
