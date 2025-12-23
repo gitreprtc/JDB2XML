@@ -8,7 +8,7 @@ use Joomla\CMS\HTML\HTMLHelper;
 
 <div class="jdb2xml-tagconversion">
   <h2>CSV conversie</h2>
-  <p>Upload CSV-bestanden om tags en categorieën om te zetten naar het XML-formaat voor import.</p>
+  <p>Upload CSV-bestanden om tags, categorieën en artikelen om te zetten naar het XML-formaat voor import.</p>
 
   <div class="jdb2xml-tagconversion-section">
     <h3>Tags</h3>
@@ -43,6 +43,26 @@ use Joomla\CMS\HTML\HTMLHelper;
         <button type="submit" class="btn btn-primary">Maak XML</button>
       </div>
       <p class="jdb2xml-tagconversion-status" data-file-status="csv_file_categories">
+        Kies een CSV-bestand om te laden.
+      </p>
+    </form>
+  </div>
+
+  <div class="jdb2xml-tagconversion-divider" role="presentation"></div>
+
+  <div class="jdb2xml-tagconversion-section">
+    <h3>Artikelen</h3>
+    <form action="index.php?option=com_jdb2xml" method="post" enctype="multipart/form-data" class="jdb2xml-tagconversion-form">
+      <input type="hidden" name="task" value="csvconversionupload">
+      <input type="hidden" name="conversion_type" value="articles">
+      <?php echo HTMLHelper::_('form.token'); ?>
+
+      <div class="jdb2xml-tagconversion-row">
+        <label for="csv_file_articles"><strong>CSV-bestand</strong></label>
+        <input type="file" name="csv_file" id="csv_file_articles" accept=".csv,text/csv">
+        <button type="submit" class="btn btn-primary">Maak XML</button>
+      </div>
+      <p class="jdb2xml-tagconversion-status" data-file-status="csv_file_articles">
         Kies een CSV-bestand om te laden.
       </p>
     </form>

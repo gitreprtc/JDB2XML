@@ -1,6 +1,8 @@
 <?php
 // Copyright Robin Colbers.
 defined('_JEXEC') or die;
+
+use Joomla\CMS\Uri\Uri;
 ?>
 
 <div class="jdb2xml-landing">
@@ -13,6 +15,13 @@ defined('_JEXEC') or die;
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=export">Export</a>
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=csvconversion">CSV conversie</a>
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=rollback">Rollback</a>
+  </div>
+
+  <div class="jdb2xml-landing-downloads">
+    <h3>CSV templates</h3>
+    <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_articles_template.csv" download>
+      Download artikel CSV-template
+    </a>
   </div>
 
   <h3 class="jdb2xml-hidden">Set-Up</h3>
@@ -36,5 +45,6 @@ defined('_JEXEC') or die;
 <style>
 .jdb2xml-landing { padding: 16px 0; }
 .jdb2xml-landing-links { display:flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+.jdb2xml-landing-downloads { margin-top: 20px; }
 .jdb2xml-hidden { display: none; }
 </style>
