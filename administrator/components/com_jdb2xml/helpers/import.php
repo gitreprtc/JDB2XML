@@ -657,7 +657,8 @@ class Jdb2xmlImportHelper
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
             $nullDate = $db->getNullDate();
-            $dateFields = ['created', 'modified', 'publish_up', 'publish_down'];
+            $now = Factory::getDate()->toSql();
+            $noteText = 'Uploaded by JDB2XML';
 
             if ($alias === '' || $catid === 0) {
                 $skipped++;
@@ -673,25 +674,6 @@ class Jdb2xmlImportHelper
                 ->where('catid=' . (int) $catid);
             $existing = $db->setQuery($query)->loadObject();
 
-            $createdValue = trim((string) ($node->created ?? ''));
-            if ($createdValue === '' || $createdValue === $nullDate) {
-                $createdValue = '';
-            }
-            $modifiedValue = trim((string) ($node->modified ?? ''));
-            if ($modifiedValue === '' || $modifiedValue === $nullDate) {
-                $modifiedValue = '';
-            }
-            $publishUpValue = trim((string) ($node->publish_up ?? ''));
-            if ($publishUpValue === '' || $publishUpValue === $nullDate) {
-                $publishUpValue = '';
-            }
-            $publishDownValue = trim((string) ($node->publish_down ?? ''));
-            if ($publishDownValue === '' || $publishDownValue === $nullDate) {
-                $publishDownValue = '';
-            }
-            if ($publishDownValue !== '' && $publishUpValue === '' && $publishDownValue === $createdValue) {
-                $publishDownValue = '';
-            }
             $fields = [
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
@@ -699,13 +681,13 @@ class Jdb2xmlImportHelper
                 'state' => (string) ($node->state ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
-                'created' => $createdValue,
+                'created' => $now,
                 'created_by' => (string) ($node->created_by ?? ''),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => $modifiedValue,
+                'modified' => $now,
                 'modified_by' => (string) ($node->modified_by ?? ''),
-                'publish_up' => $publishUpValue,
-                'publish_down' => $publishDownValue,
+                'publish_up' => $now,
+                'publish_down' => $nullDate,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -715,7 +697,7 @@ class Jdb2xmlImportHelper
                 'metadata' => (string) ($node->metadata ?? ''),
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
+                'note' => $noteText,
             ];
 
             if ($existing) {
@@ -723,9 +705,6 @@ class Jdb2xmlImportHelper
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
                 foreach ($fields as $field => $value) {
-                    if (in_array($field, $dateFields, true) && $value === '') {
-                        continue;
-                    }
                     if (!property_exists($existing, $field)) {
                         continue;
                     }
@@ -755,25 +734,6 @@ class Jdb2xmlImportHelper
             if ($table === false) {
                 throw new RuntimeException('Article-table can not be loaded');
             }
-            $createdAt = trim((string) ($node->created ?? ''));
-            if ($createdAt === '') {
-                $createdAt = Factory::getDate()->toSql();
-            }
-            $modifiedAt = trim((string) ($node->modified ?? ''));
-            if ($modifiedAt === '') {
-                $modifiedAt = $nullDate;
-            }
-            $publishUpAt = trim((string) ($node->publish_up ?? ''));
-            if ($publishUpAt === '') {
-                $publishUpAt = $nullDate;
-            }
-            $publishDownAt = trim((string) ($node->publish_down ?? ''));
-            if ($publishDownAt === '' || $publishDownAt === $nullDate) {
-                $publishDownAt = $nullDate;
-            }
-            if ($publishUpAt === $nullDate && $publishDownAt === $createdAt) {
-                $publishDownAt = $nullDate;
-            }
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
@@ -783,13 +743,13 @@ class Jdb2xmlImportHelper
                 'state' => (int) ($node->state ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
-                'created' => $createdAt,
+                'created' => $now,
                 'created_by' => (int) ($node->created_by ?? 0),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => $modifiedAt,
+                'modified' => $now,
                 'modified_by' => (int) ($node->modified_by ?? 0),
-                'publish_up' => $publishUpAt,
-                'publish_down' => $publishDownAt,
+                'publish_up' => $now,
+                'publish_down' => $nullDate,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
@@ -799,7 +759,7 @@ class Jdb2xmlImportHelper
                 'metadata' => (string) ($node->metadata ?? ''),
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
+                'note' => $noteText,
             ];
             $table->bind($data);
             if (!$table->check()) {
