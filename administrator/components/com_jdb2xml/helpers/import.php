@@ -673,6 +673,25 @@ class Jdb2xmlImportHelper
                 ->where('catid=' . (int) $catid);
             $existing = $db->setQuery($query)->loadObject();
 
+            $createdValue = trim((string) ($node->created ?? ''));
+            if ($createdValue === '' || $createdValue === $nullDate) {
+                $createdValue = '';
+            }
+            $modifiedValue = trim((string) ($node->modified ?? ''));
+            if ($modifiedValue === '' || $modifiedValue === $nullDate) {
+                $modifiedValue = '';
+            }
+            $publishUpValue = trim((string) ($node->publish_up ?? ''));
+            if ($publishUpValue === '' || $publishUpValue === $nullDate) {
+                $publishUpValue = '';
+            }
+            $publishDownValue = trim((string) ($node->publish_down ?? ''));
+            if ($publishDownValue === '' || $publishDownValue === $nullDate) {
+                $publishDownValue = '';
+            }
+            if ($publishDownValue !== '' && $publishUpValue === '' && $publishDownValue === $createdValue) {
+                $publishDownValue = '';
+            }
             $fields = [
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
@@ -680,13 +699,13 @@ class Jdb2xmlImportHelper
                 'state' => (string) ($node->state ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
-                'created' => (string) ($node->created ?? ''),
+                'created' => $createdValue,
                 'created_by' => (string) ($node->created_by ?? ''),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => (string) ($node->modified ?? ''),
+                'modified' => $modifiedValue,
                 'modified_by' => (string) ($node->modified_by ?? ''),
-                'publish_up' => (string) ($node->publish_up ?? ''),
-                'publish_down' => (string) ($node->publish_down ?? ''),
+                'publish_up' => $publishUpValue,
+                'publish_down' => $publishDownValue,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -749,7 +768,10 @@ class Jdb2xmlImportHelper
                 $publishUpAt = $nullDate;
             }
             $publishDownAt = trim((string) ($node->publish_down ?? ''));
-            if ($publishDownAt === '') {
+            if ($publishDownAt === '' || $publishDownAt === $nullDate) {
+                $publishDownAt = $nullDate;
+            }
+            if ($publishUpAt === $nullDate && $publishDownAt === $createdAt) {
                 $publishDownAt = $nullDate;
             }
             $data = [
