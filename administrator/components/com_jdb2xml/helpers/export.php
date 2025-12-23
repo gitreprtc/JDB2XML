@@ -3,6 +3,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Throwable;
 
 class Jdb2xmlExportHelper
 {
@@ -17,6 +18,7 @@ class Jdb2xmlExportHelper
         $db = Factory::getDbo();
         $ts = date('Ymd_His');
         $messages = [];
+        $phocaAvailable = self::isPhocaAvailable($db);
 
         // =====================
         // CATEGORIES
@@ -80,6 +82,11 @@ class Jdb2xmlExportHelper
         // PHOCA GALLERY CATEGORIES
         // =====================
         if ($type === 'all' || $type === 'phocagallerycategories') {
+            if (!$phocaAvailable) {
+                if ($type === 'phocagallerycategories') {
+                    return 'Phoca Gallery not available; no export generated.';
+                }
+            } else {
             $query = $db->getQuery(true)
                 ->select('*')
                 ->from('#__phocagallery_categories')
@@ -118,6 +125,7 @@ class Jdb2xmlExportHelper
                 throw new RuntimeException('Cannot write phoca gallery categories XML');
             }
             $messages[] = basename($catFile);
+            }
         }
 
         // =====================
@@ -210,6 +218,17 @@ class Jdb2xmlExportHelper
 
         $suffix = $type === 'all' ? 'full' : $type;
         return 'Export completed (' . $suffix . '): ' . implode(' & ', $messages);
+    }
+
+    private static function isPhocaAvailable($db): bool
+    {
+        try {
+            $columns = $db->getTableColumns('#__phocagallery_categories', false);
+        } catch (Throwable $e) {
+            return false;
+        }
+
+        return !empty($columns);
     }
 
     public static function logBatch(string $type, bool $success, ?string $error = null): void

@@ -27,15 +27,17 @@ defined('_JEXEC') or die;
           <button type="submit" class="btn btn-primary">Manual export</button>
         </form>
       </div>
-      <div class="jdb2xml-export-row">
-        <span class="jdb2xml-export-label">Phoca Gallery Categories</span>
-        <form action="index.php?option=com_jdb2xml" method="post">
-          <input type="hidden" name="task" value="exportmanual">
-          <input type="hidden" name="export_type" value="phocagallerycategories">
-          <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
-          <button type="submit" class="btn btn-primary">Manual export</button>
-        </form>
-      </div>
+      <?php if (!empty($this->phocaAvailable)) : ?>
+        <div class="jdb2xml-export-row">
+          <span class="jdb2xml-export-label">Phoca Gallery Categories</span>
+          <form action="index.php?option=com_jdb2xml" method="post">
+            <input type="hidden" name="task" value="exportmanual">
+            <input type="hidden" name="export_type" value="phocagallerycategories">
+            <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
+            <button type="submit" class="btn btn-primary">Manual export</button>
+          </form>
+        </div>
+      <?php endif; ?>
       <div class="jdb2xml-export-row">
         <span class="jdb2xml-export-label">Articles</span>
         <form action="index.php?option=com_jdb2xml" method="post">
@@ -53,6 +55,7 @@ defined('_JEXEC') or die;
 .jdb2xml-export { padding: 16px 0; }
 .jdb2xml-export-section { margin-bottom: 18px; }
 .jdb2xml-export-list { display: flex; flex-direction: column; gap: 10px; }
-.jdb2xml-export-row { display: flex; align-items: center; gap: 12px; }
-.jdb2xml-export-label { min-width: 120px; font-weight: 600; }
+.jdb2xml-export-row { display: grid; grid-template-columns: minmax(220px, 1fr) auto; align-items: center; column-gap: 12px; }
+.jdb2xml-export-row form { margin: 0; }
+.jdb2xml-export-label { font-weight: 600; }
 </style>

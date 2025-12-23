@@ -260,8 +260,21 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/export.php';
         $app = $this->getApplicationWithTokenCheck();
         $type = $app->input->getCmd('export_type', 'all');
-        if (!in_array($type, ['categories', 'tags', 'articles'], true)) {
+        if (!in_array($type, ['categories', 'tags', 'articles', 'phocagallerycategories'], true)) {
             $type = 'all';
+        }
+        if ($type === 'phocagallerycategories') {
+            $db = Factory::getDbo();
+            try {
+                $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+            } catch (Throwable $e) {
+                $phocaColumns = [];
+            }
+            if (empty($phocaColumns)) {
+                $app->enqueueMessage('Phoca Gallery not available; nothing to export.', 'warning');
+                $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+                return;
+            }
         }
 
         try {
