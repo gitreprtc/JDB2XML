@@ -478,6 +478,7 @@ class Jdb2xmlImportHelper
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
+                'approved' => (string) ($node->approved ?? '1'),
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
@@ -525,6 +526,14 @@ class Jdb2xmlImportHelper
                         }
                         continue;
                     }
+                    if ($field === 'approved') {
+                        if ($value !== '' && (int) $dbVal !== (int) $value) {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = (int) $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
                     if ($value === '') {
                         continue;
                     }
@@ -558,6 +567,7 @@ class Jdb2xmlImportHelper
             $defaults = [
                 'title' => $title,
                 'alias' => $aliasValue,
+                'approved' => isset($node->approved) ? (int) $node->approved : 1,
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
