@@ -657,6 +657,7 @@ class Jdb2xmlImportHelper
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
             $now = Factory::getDate()->toSql();
+            $publishUp = Factory::getDate()->setTime(0, 0, 0)->toSql();
             $noteText = 'Uploaded by JDB2XML';
             $nullPublishDown = null;
 
@@ -686,7 +687,7 @@ class Jdb2xmlImportHelper
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
                 'modified' => $now,
                 'modified_by' => (string) ($node->modified_by ?? ''),
-                'publish_up' => $now,
+                'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
@@ -723,7 +724,7 @@ class Jdb2xmlImportHelper
                             'id' => (int) $existing->id,
                             'created' => $now,
                             'modified' => $now,
-                            'publish_up' => $now,
+                            'publish_up' => $publishUp,
                             'publish_down' => $nullPublishDown,
                             'note' => $noteText,
                         ];
@@ -757,7 +758,7 @@ class Jdb2xmlImportHelper
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
                 'modified' => $now,
                 'modified_by' => (int) ($node->modified_by ?? 0),
-                'publish_up' => $now,
+                'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
@@ -781,7 +782,7 @@ class Jdb2xmlImportHelper
                 'id' => (int) $table->id,
                 'created' => $now,
                 'modified' => $now,
-                'publish_up' => $now,
+                'publish_up' => $publishUp,
                 'publish_down' => $nullPublishDown,
                 'note' => $noteText,
             ];
