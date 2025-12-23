@@ -656,6 +656,8 @@ class Jdb2xmlImportHelper
             $alias = trim((string) ($node->alias ?? ''));
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
+            $nullDate = $db->getNullDate();
+            $dateFields = ['created', 'modified', 'publish_up', 'publish_down'];
 
             if ($alias === '' || $catid === 0) {
                 $skipped++;
@@ -702,6 +704,9 @@ class Jdb2xmlImportHelper
                 $before = ['id' => (int)$existing->id, 'fields' => []];
 
                 foreach ($fields as $field => $value) {
+                    if (in_array($field, $dateFields, true) && $value === '') {
+                        continue;
+                    }
                     if (!property_exists($existing, $field)) {
                         continue;
                     }
@@ -731,6 +736,22 @@ class Jdb2xmlImportHelper
             if ($table === false) {
                 throw new RuntimeException('Article-table can not be loaded');
             }
+            $created = trim((string) ($node->created ?? ''));
+            if ($created === '') {
+                $created = Factory::getDate()->toSql();
+            }
+            $modified = trim((string) ($node->modified ?? ''));
+            if ($modified === '') {
+                $modified = $nullDate;
+            }
+            $publishUp = trim((string) ($node->publish_up ?? ''));
+            if ($publishUp === '') {
+                $publishUp = $nullDate;
+            }
+            $publishDown = trim((string) ($node->publish_down ?? ''));
+            if ($publishDown === '') {
+                $publishDown = $nullDate;
+            }
             $data = [
                 'title' => (string) ($node->title ?? $alias),
                 'alias' => $alias,
@@ -740,13 +761,13 @@ class Jdb2xmlImportHelper
                 'state' => (int) ($node->state ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
-                'created' => (string) ($node->created ?? Factory::getDate()->toSql()),
+                'created' => $created,
                 'created_by' => (int) ($node->created_by ?? 0),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => (string) ($node->modified ?? $db->getNullDate()),
+                'modified' => $modified,
                 'modified_by' => (int) ($node->modified_by ?? 0),
-                'publish_up' => (string) ($node->publish_up ?? $db->getNullDate()),
-                'publish_down' => (string) ($node->publish_down ?? $db->getNullDate()),
+                'publish_up' => $publishUp,
+                'publish_down' => $publishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
