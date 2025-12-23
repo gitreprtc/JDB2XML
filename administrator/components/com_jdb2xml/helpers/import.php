@@ -656,9 +656,9 @@ class Jdb2xmlImportHelper
             $alias = trim((string) ($node->alias ?? ''));
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
-            $nullDate = $db->getNullDate();
             $now = Factory::getDate()->toSql();
             $noteText = 'Uploaded by JDB2XML';
+            $nullPublishDown = null;
 
             if ($alias === '' || $catid === 0) {
                 $skipped++;
@@ -687,7 +687,7 @@ class Jdb2xmlImportHelper
                 'modified' => $now,
                 'modified_by' => (string) ($node->modified_by ?? ''),
                 'publish_up' => $now,
-                'publish_down' => $nullDate,
+                'publish_down' => $nullPublishDown,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -724,7 +724,7 @@ class Jdb2xmlImportHelper
                             'created' => $now,
                             'modified' => $now,
                             'publish_up' => $now,
-                            'publish_down' => $nullDate,
+                            'publish_down' => $nullPublishDown,
                             'note' => $noteText,
                         ];
                         $db->updateObject('#__content', $override, 'id');
@@ -758,7 +758,7 @@ class Jdb2xmlImportHelper
                 'modified' => $now,
                 'modified_by' => (int) ($node->modified_by ?? 0),
                 'publish_up' => $now,
-                'publish_down' => $nullDate,
+                'publish_down' => $nullPublishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
@@ -782,7 +782,7 @@ class Jdb2xmlImportHelper
                 'created' => $now,
                 'modified' => $now,
                 'publish_up' => $now,
-                'publish_down' => $nullDate,
+                'publish_down' => $nullPublishDown,
                 'note' => $noteText,
             ];
             $db->updateObject('#__content', $override, 'id');
