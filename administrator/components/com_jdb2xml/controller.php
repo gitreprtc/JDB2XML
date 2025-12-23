@@ -5,6 +5,8 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Filesystem\Folder;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Session\Session;
@@ -74,6 +76,7 @@ class Jdb2xmlController extends BaseController
 
         $rows = array_merge(
             $data['categories'] ?? [],
+            $data['phocaCategories'] ?? [],
             $data['tags'] ?? [],
             $data['articles'] ?? []
         );
@@ -271,6 +274,55 @@ class Jdb2xmlController extends BaseController
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function csvconversionupload()
+    {
+        $app = $this->getApplicationWithTokenCheck();
+        $file = $app->input->files->get('csv_file');
+        $type = $app->input->getCmd('conversion_type', 'tags');
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            $app->enqueueMessage('Upload failed: please select a CSV file.', 'warning');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=csvconversion');
+            return;
+        }
+
+        $extension = strtolower((string) File::getExt($file['name']));
+        if ($extension !== 'csv') {
+            $app->enqueueMessage('Upload failed: only CSV files are supported.', 'warning');
+            $this->setRedirect('index.php?option=com_jdb2xml&view=csvconversion');
+            return;
+        }
+
+        $importDir = JPATH_ROOT . '/media/com_jdb2xml/import';
+        if (!Folder::exists($importDir)) {
+            Folder::create($importDir);
+        }
+
+        require_once __DIR__ . '/helpers/tag_conversion.php';
+
+        try {
+            if ($type === 'categories') {
+                $result = Jdb2xmlTagConversionHelper::convertCsvToCategoriesXml($file['tmp_name']);
+            } else {
+                $result = Jdb2xmlTagConversionHelper::convertCsvToTagsXml($file['tmp_name']);
+            }
+            $safeBase = File::makeSafe(pathinfo((string) $file['name'], PATHINFO_FILENAME));
+            $timestamp = date('Ymd_His');
+            $prefix = $type === 'categories' ? 'categories' : 'tags';
+            $filename = ($safeBase !== '' ? $safeBase . '_' : '') . $prefix . '_conversie_' . $timestamp . '.xml';
+
+            $targetPath = $importDir . '/' . $filename;
+            File::write($targetPath, $result['xml']);
+
+            $label = $type === 'categories' ? 'categories' : 'tags';
+            $app->enqueueMessage('CSV conversion created ' . (int) $result['count'] . ' ' . $label . ' and saved ' . $filename . ' to the import folder.', 'message');
+        } catch (Throwable $e) {
+            $app->enqueueMessage('CSV conversion error: ' . $e->getMessage(), 'error');
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=csvconversion');
     }
 
     public function saveexportschedule()

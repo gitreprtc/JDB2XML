@@ -11,6 +11,7 @@ defined('_JEXEC') or die;
     <a class="btn btn-primary" href="index.php?option=com_jdb2xml&view=controlpanel">Manual Import</a>
     <a class="btn btn-secondary jdb2xml-hidden" href="index.php?option=com_jdb2xml&view=importautomatic">Automatic Import</a>
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=export">Export</a>
+    <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=csvconversion">CSV conversie</a>
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=rollback">Rollback</a>
   </div>
 

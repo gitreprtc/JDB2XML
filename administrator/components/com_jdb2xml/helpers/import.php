@@ -3,6 +3,8 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Filter\OutputFilter;
+use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
@@ -24,8 +26,8 @@ class Jdb2xmlImportHelper
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'tags' => [], 'articles' => []],
-            'updated' => ['categories' => [], 'tags' => [], 'articles' => []],
+            'created' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -40,6 +42,7 @@ class Jdb2xmlImportHelper
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
         $createdCats = $changedCats = $skippedCats = 0;
+        $createdPhocaCats = $changedPhocaCats = $skippedPhocaCats = 0;
         $createdTags = $changedTags = $skippedTags = 0;
         $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
@@ -47,6 +50,12 @@ class Jdb2xmlImportHelper
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
         $preview = $app->getUserState('com_jdb2xml.preview');
+        if ((!is_array($preview) || $preview === []) && $selectedFile) {
+            $preview = $app->getUserState('com_jdb2xml.preview.' . $selectedFile);
+        }
+        if ($selectedFile && is_array($preview) && !isset($preview[$selectedFile]) && array_key_exists('categories', $preview)) {
+            $preview = [$selectedFile => $preview];
+        }
         $planMap = [];
         if (is_array($preview)) {
             foreach ($preview as $fileKey => $data) {
@@ -72,9 +81,11 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
+        $allowedPhocaCategorySet = null;
         $allowedArticleSet = null;
         $allowTags = true;
         $allowArticles = true;
+        $allowPhocaCategories = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -97,6 +108,19 @@ class Jdb2xmlImportHelper
                         continue;
                     }
                     $allowedArticleSet[$key] = true;
+                }
+
+                $allowPhocaCategories = !empty($previewData['phocaCategories']) && is_array($previewData['phocaCategories']);
+                if ($allowPhocaCategories) {
+                    $allowedPhocaCategorySet = [];
+                    $rows = $previewData['phocaCategories'] ?? [];
+                    foreach ($rows as $row) {
+                        $key = (string)($row['path'] ?? $row['id'] ?? '');
+                        if ($key === '' || isset($excludeSet[$key])) {
+                            continue;
+                        }
+                        $allowedPhocaCategorySet[$key] = true;
+                    }
                 }
             }
         }
@@ -133,6 +157,14 @@ class Jdb2xmlImportHelper
                         self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
                     }
 
+                    if ($allowPhocaCategories) {
+                        if (isset($xml->phocagallerycategories)) {
+                            self::importPhocaGalleryCategories($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                        } elseif ($xml->getName() === 'phocagallerycategories') {
+                            self::importPhocaGalleryCategories($db, $xml, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                        }
+                    }
+
                     if ($allowTags) {
                         if (isset($xml->tags)) {
                             self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
@@ -149,10 +181,14 @@ class Jdb2xmlImportHelper
                         }
                     }
 
-                    if (!$dryRun) @rename($file, $processedDir . '/' . basename($file));
+                    if (!$dryRun) {
+                        self::moveFile($file, $processedDir);
+                    }
                 } catch (Throwable $e) {
                     $warnings[] = basename($file) . ': ' . $e->getMessage();
-                    if (!$dryRun) @rename($file, $failedDir . '/' . basename($file));
+                    if (!$dryRun) {
+                        self::moveFile($file, $failedDir);
+                    }
                 }
             }
 
@@ -165,6 +201,7 @@ class Jdb2xmlImportHelper
             $msg = [];
             $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
             $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            $msg[] = 'Phoca Gallery categories: new=' . $createdPhocaCats . ', changed=' . $changedPhocaCats . ', skipped=' . $skippedPhocaCats;
             $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
             $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
             if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
@@ -175,9 +212,43 @@ class Jdb2xmlImportHelper
         }
     }
 
+    private static function moveFile(string $source, string $targetDir): void
+    {
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0755, true);
+        }
+
+        $base = basename($source);
+        $target = $targetDir . '/' . $base;
+
+        if (is_file($target)) {
+            $name = pathinfo($base, PATHINFO_FILENAME);
+            $ext = pathinfo($base, PATHINFO_EXTENSION);
+            $counter = 1;
+            do {
+                $suffix = '_' . $counter;
+                $candidate = $name . $suffix . ($ext !== '' ? '.' . $ext : '');
+                $target = $targetDir . '/' . $candidate;
+                $counter++;
+            } while (is_file($target));
+        }
+
+        if (!File::move($source, $target)) {
+            @rename($source, $target);
+        }
+    }
+
     private static function importCategories($db, $categories, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
         $extension = (string) ($categories['extension'] ?? 'com_content');
+        $nodeMap = [];
+        foreach ($categories->category as $node) {
+            $nodePath = trim((string) $node->path);
+            if ($nodePath === '') {
+                continue;
+            }
+            $nodeMap[$nodePath] = $node;
+        }
 
         foreach ($categories->category as $node) {
             $path = trim((string) $node->path);
@@ -237,51 +308,225 @@ class Jdb2xmlImportHelper
                 continue;
             }
 
-            if ($dryRun) { $created++; continue; }
+            self::ensureCategoryExists($db, $extension, $path, $nodeMap, $dryRun, $created, $warnings, $rollback);
+        }
+    }
 
-            $parentId = 1;
-            if (strpos($path, '/') !== false) {
-                $parentPath = substr($path, 0, strrpos($path, '/'));
-                if ($parentPath !== '') {
-                    $parentQuery = $db->getQuery(true)
-                        ->select('id')
-                        ->from('#__categories')
-                        ->where('path=' . $db->quote($parentPath))
-                        ->where('extension=' . $db->quote($extension));
-                    $parentId = (int) $db->setQuery($parentQuery)->loadResult() ?: 1;
-                }
+    private static function ensureCategoryExists($db, string $extension, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int
+    {
+        if ($path === '') {
+            return 1;
+        }
+
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__categories')
+            ->where('path=' . $db->quote($path))
+            ->where('extension=' . $db->quote($extension));
+        $existingId = (int) $db->setQuery($query)->loadResult();
+        if ($existingId > 0) {
+            return $existingId;
+        }
+
+        if ($dryRun) {
+            $created++;
+            return 1;
+        }
+
+        $node = $nodeMap[$path] ?? null;
+
+        $parentId = 1;
+        if (strpos($path, '/') !== false) {
+            $parentPath = substr($path, 0, strrpos($path, '/'));
+            if ($parentPath !== '') {
+                $parentId = self::ensureCategoryExists($db, $extension, $parentPath, $nodeMap, $dryRun, $created, $warnings, $rollback);
             }
+        }
 
-            $table = Table::getInstance('Category');
-            $data = [
-                'title' => (string) ($node->title ?? $path),
-                'alias' => (string) ($node->alias ?? ''),
-                'path'  => $path,
-                'extension' => $extension,
-                'published' => (int) ($node->published ?? 1),
-                'access' => (int) ($node->access ?? 1),
-                'language' => (string) ($node->language ?? '*'),
+        $segment = $path;
+        if (strpos($path, '/') !== false) {
+            $segment = substr($path, strrpos($path, '/') + 1);
+        }
+
+        $titleFallback = ucwords(str_replace('-', ' ', $segment));
+        $aliasFallback = $segment;
+
+        $table = Table::getInstance('Category');
+        $nodeTitle = $node ? (string) ($node->title ?? '') : '';
+        $nodeAlias = $node ? (string) ($node->alias ?? '') : '';
+        $nodePublished = $node ? (int) ($node->published ?? 1) : 1;
+        $nodeAccess = $node ? (int) ($node->access ?? 1) : 1;
+        $nodeLanguage = $node ? (string) ($node->language ?? '*') : '*';
+        $nodeDescription = $node ? (string) ($node->description ?? '') : '';
+        $nodeParams = $node ? (string) ($node->params ?? '') : '';
+        $nodeMetadata = $node ? (string) ($node->metadata ?? '') : '';
+        $nodeMetadesc = $node ? (string) ($node->metadesc ?? '') : '';
+        $nodeMetakey = $node ? (string) ($node->metakey ?? '') : '';
+        $nodeNote = $node ? (string) ($node->note ?? '') : '';
+
+        $data = [
+            'title' => $nodeTitle !== '' ? $nodeTitle : $titleFallback,
+            'alias' => $nodeAlias !== '' ? $nodeAlias : $aliasFallback,
+            'path'  => $path,
+            'extension' => $extension,
+            'published' => $nodePublished,
+            'access' => $nodeAccess,
+            'language' => $nodeLanguage,
+            'description' => $nodeDescription,
+            'params' => $nodeParams,
+            'metadata' => $nodeMetadata,
+            'metadesc' => $nodeMetadesc,
+            'metakey' => $nodeMetakey,
+            'note' => $nodeNote,
+            'parent_id' => $parentId
+        ];
+        $table->bind($data);
+        $table->setLocation($parentId, 'last-child');
+        if (!$table->check()) {
+            throw new RuntimeException('Category check failed: ' . $table->getError());
+        }
+        if (!$table->store()) {
+            throw new RuntimeException('Category save failed: ' . $table->getError());
+        }
+        if (method_exists($table, 'rebuildPath')) {
+            $table->rebuildPath($table->id);
+        }
+
+        $rollback['created']['categories'][] = (int) $table->id;
+        $created++;
+
+        return (int) $table->id;
+    }
+
+    private static function importPhocaGalleryCategories(
+        $db,
+        $categories,
+        bool $dryRun,
+        array $exclude,
+        int &$created,
+        int &$changed,
+        int &$skipped,
+        array &$warnings,
+        array &$rollback,
+        ?array $allowed = null
+    ): void {
+        $columns = self::getTableColumns($db, '#__phocagallery_categories');
+        if (empty($columns)) {
+            $warnings[] = 'Phoca Gallery categories table missing.';
+            return;
+        }
+
+        foreach ($categories->category as $node) {
+            $id = (int) ($node->id ?? 0);
+            $alias = trim((string) ($node->alias ?? ''));
+            $key = $alias !== '' ? $alias : (string) $id;
+
+            if ($key === '') {
+                $skipped++;
+                $warnings[] = 'Phoca Gallery category without alias or id skipped.';
+                continue;
+            }
+            if (isset($exclude[$key])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$key])) { $skipped++; continue; }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__phocagallery_categories');
+            if ($alias !== '') {
+                $query->where('alias=' . $db->quote($alias));
+            } else {
+                $query->where('id=' . (int) $id);
+            }
+            $existing = $db->setQuery($query)->loadObject();
+
+            $title = (string) ($node->title ?? $alias);
+            $map = [
+                'title' => $title,
+                'alias' => $alias,
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
-                'metadesc' => (string) ($node->metadesc ?? ''),
-                'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
-                'parent_id' => $parentId
+                'published' => (string) ($node->published ?? ''),
+                'access' => (string) ($node->access ?? ''),
+                'language' => (string) ($node->language ?? ''),
+                'parent_id' => (string) ($node->parent_id ?? ''),
+                'ordering' => (string) ($node->ordering ?? ''),
             ];
-            $table->bind($data);
-            $table->setLocation($parentId, 'last-child');
-            if (!$table->check()) {
-                throw new RuntimeException('Category check failed: ' . $table->getError());
-            }
-            if (!$table->store()) {
-                throw new RuntimeException('Category save failed: ' . $table->getError());
-            }
-            if (method_exists($table, 'rebuildPath')) {
-                $table->rebuildPath($table->id);
+
+            if ($existing) {
+                $changedLocal = false;
+                $before = ['id' => (int)$existing->id, 'fields' => []];
+
+                if ($title !== '' && (string) ($existing->title ?? '') !== $title) {
+                    if (isset($columns['title'])) {
+                        $before['fields']['title'] = (string) ($existing->title ?? '');
+                        $existing->title = $title;
+                        $changedLocal = true;
+                    }
+                }
+
+                foreach ($map as $field => $value) {
+                    if ($value === '' || !isset($columns[$field])) {
+                        continue;
+                    }
+                    if (!property_exists($existing, $field)) {
+                        continue;
+                    }
+                    $dbVal = (string) ($existing->$field ?? '');
+                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                        $before['fields'][$field] = $dbVal;
+                        $existing->$field = $value;
+                        $changedLocal = true;
+                    }
+                }
+
+                if ($changedLocal) {
+                    if (!$dryRun) {
+                        $db->updateObject('#__phocagallery_categories', $existing, 'id');
+                        $rollback['updated']['phoca_categories'][] = $before;
+                    }
+                    $changed++;
+                } else {
+                    $skipped++;
+                }
+                continue;
             }
 
-            $rollback['created']['categories'][] = (int) $table->id;
+            if ($dryRun) { $created++; continue; }
+
+            $data = [];
+            $aliasValue = $alias !== '' ? $alias : OutputFilter::stringURLSafe($title);
+            $defaults = [
+                'title' => $title,
+                'alias' => $aliasValue,
+                'parent_id' => (int) ($node->parent_id ?? 0),
+                'published' => (int) ($node->published ?? 1),
+                'access' => (int) ($node->access ?? 1),
+                'language' => (string) ($node->language ?? '*'),
+                'ordering' => (int) ($node->ordering ?? 0),
+                'description' => (string) ($node->description ?? ''),
+                'params' => (string) ($node->params ?? ''),
+                'metadata' => (string) ($node->metadata ?? ''),
+            ];
+
+            foreach ($defaults as $field => $value) {
+                if (isset($columns[$field])) {
+                    $data[$field] = $value;
+                }
+            }
+
+            if ($data === []) {
+                $warnings[] = 'Phoca Gallery category skipped (no valid columns).';
+                $skipped++;
+                continue;
+            }
+
+            $obj = (object) $data;
+            if (!$db->insertObject('#__phocagallery_categories', $obj)) {
+                throw new RuntimeException('Phoca Gallery category save failed');
+            }
+
+            $rollback['created']['phoca_categories'][] = (int) ($obj->id ?? 0);
             $created++;
         }
     }
@@ -411,6 +656,14 @@ class Jdb2xmlImportHelper
             $alias = trim((string) ($node->alias ?? ''));
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
+            $now = Factory::getDate()->toSql();
+            $publishUp = Factory::getDate()->setTime(0, 0, 0)->toSql();
+            $noteText = 'Uploaded by JDB2XML';
+            $nullPublishDown = null;
+            $userId = (int) Factory::getUser()->id;
+            $defaultAccess = 1;
+            $defaultLanguage = '*';
+            $defaultState = 1;
 
             if ($alias === '' || $catid === 0) {
                 $skipped++;
@@ -430,16 +683,16 @@ class Jdb2xmlImportHelper
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
                 'fulltext' => (string) ($node->fulltext ?? ''),
-                'state' => (string) ($node->state ?? ''),
-                'access' => (string) ($node->access ?? ''),
-                'language' => (string) ($node->language ?? ''),
-                'created' => (string) ($node->created ?? ''),
-                'created_by' => (string) ($node->created_by ?? ''),
-                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => (string) ($node->modified ?? ''),
-                'modified_by' => (string) ($node->modified_by ?? ''),
-                'publish_up' => (string) ($node->publish_up ?? ''),
-                'publish_down' => (string) ($node->publish_down ?? ''),
+                'state' => (string) $defaultState,
+                'access' => (string) $defaultAccess,
+                'language' => (string) $defaultLanguage,
+                'created' => $now,
+                'created_by' => (string) $userId,
+                'created_by_alias' => '',
+                'modified' => $now,
+                'modified_by' => (string) $userId,
+                'publish_up' => $publishUp,
+                'publish_down' => $nullPublishDown,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -449,7 +702,7 @@ class Jdb2xmlImportHelper
                 'metadata' => (string) ($node->metadata ?? ''),
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
+                'note' => $noteText,
             ];
 
             if ($existing) {
@@ -471,6 +724,23 @@ class Jdb2xmlImportHelper
                 if ($changedLocal) {
                     if (!$dryRun) {
                         $db->updateObject('#__content', $existing, 'id');
+                        $override = (object) [
+                            'id' => (int) $existing->id,
+                            'state' => $defaultState,
+                            'access' => $defaultAccess,
+                            'language' => $defaultLanguage,
+                            'created' => $now,
+                            'created_by' => $userId,
+                            'modified' => $now,
+                            'modified_by' => $userId,
+                            'publish_up' => $publishUp,
+                            'publish_down' => $nullPublishDown,
+                            'note' => $noteText,
+                        ];
+                        $db->updateObject('#__content', $override, 'id');
+                        self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
+                        self::ensureArticleUcmContent($db, (int) $existing->id);
+                        self::ensureArticleWorkflowAssociation($db, (int) $existing->id);
                         $rollback['updated']['articles'][] = $before;
                     }
                     $changed++;
@@ -492,16 +762,16 @@ class Jdb2xmlImportHelper
                 'catid' => $catid,
                 'introtext' => (string) ($node->introtext ?? ''),
                 'fulltext' => (string) ($node->fulltext ?? ''),
-                'state' => (int) ($node->state ?? 1),
-                'access' => (int) ($node->access ?? 1),
-                'language' => (string) ($node->language ?? '*'),
-                'created' => (string) ($node->created ?? Factory::getDate()->toSql()),
-                'created_by' => (int) ($node->created_by ?? 0),
-                'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => (string) ($node->modified ?? $db->getNullDate()),
-                'modified_by' => (int) ($node->modified_by ?? 0),
-                'publish_up' => (string) ($node->publish_up ?? $db->getNullDate()),
-                'publish_down' => (string) ($node->publish_down ?? $db->getNullDate()),
+                'state' => $defaultState,
+                'access' => $defaultAccess,
+                'language' => $defaultLanguage,
+                'created' => $now,
+                'created_by' => $userId,
+                'created_by_alias' => '',
+                'modified' => $now,
+                'modified_by' => $userId,
+                'publish_up' => $publishUp,
+                'publish_down' => $nullPublishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
@@ -511,7 +781,7 @@ class Jdb2xmlImportHelper
                 'metadata' => (string) ($node->metadata ?? ''),
                 'metadesc' => (string) ($node->metadesc ?? ''),
                 'metakey' => (string) ($node->metakey ?? ''),
-                'note' => (string) ($node->note ?? ''),
+                'note' => $noteText,
             ];
             $table->bind($data);
             if (!$table->check()) {
@@ -520,6 +790,23 @@ class Jdb2xmlImportHelper
             if (!$table->store()) {
                 throw new RuntimeException('Article save failed: ' . $table->getError());
             }
+            $override = (object) [
+                'id' => (int) $table->id,
+                'state' => $defaultState,
+                'access' => $defaultAccess,
+                'language' => $defaultLanguage,
+                'created' => $now,
+                'created_by' => $userId,
+                'modified' => $now,
+                'modified_by' => $userId,
+                'publish_up' => $publishUp,
+                'publish_down' => $nullPublishDown,
+                'note' => $noteText,
+            ];
+            $db->updateObject('#__content', $override, 'id');
+            self::ensureArticleAsset($db, (int) $table->id, $catid, $userId, (string) ($node->title ?? $alias));
+            self::ensureArticleUcmContent($db, (int) $table->id);
+            self::ensureArticleWorkflowAssociation($db, (int) $table->id);
 
             $rollback['created']['articles'][] = (int) $table->id;
             $created++;
@@ -529,5 +816,231 @@ class Jdb2xmlImportHelper
     private static function buildArticleKey(string $alias, int $catid): string
     {
         return 'article:' . $catid . ':' . $alias;
+    }
+
+    private static function ensureArticleAsset($db, int $articleId, int $catid, int $userId, string $title): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $currentAssetId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('asset_id')
+                ->from('#__content')
+                ->where('id=' . (int) $articleId)
+        )->loadResult();
+
+        $assetName = 'com_content.article.' . $articleId;
+        if ($currentAssetId > 0) {
+            $assetRow = $db->setQuery(
+                $db->getQuery(true)
+                    ->select($db->quoteName(['id', 'name']))
+                    ->from('#__assets')
+                    ->where('id=' . (int) $currentAssetId)
+            )->loadAssoc();
+            if ($assetRow && (string) ($assetRow['name'] ?? '') === $assetName) {
+                return;
+            }
+        }
+
+        $assetId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from('#__assets')
+                ->where('name=' . $db->quote($assetName))
+        )->loadResult();
+
+        if ($assetId > 0) {
+            $assetUpdate = (object) ['id' => $articleId, 'asset_id' => $assetId];
+            $db->updateObject('#__content', $assetUpdate, 'id');
+            return;
+        }
+
+        $parentName = $catid > 0 ? 'com_content.category.' . $catid : 'com_content';
+        $parentId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from('#__assets')
+                ->where('name=' . $db->quote($parentName))
+        )->loadResult();
+
+        if ($parentId <= 0) {
+            $parentId = (int) $db->setQuery(
+                $db->getQuery(true)
+                    ->select('id')
+                    ->from('#__assets')
+                    ->where('name=' . $db->quote('com_content'))
+            )->loadResult();
+        }
+        if ($parentId <= 0) {
+            $parentId = 1;
+        }
+
+        $assetTable = Table::getInstance('Asset');
+        if ($assetTable === false) {
+            return;
+        }
+
+        $assetTable->parent_id = $parentId;
+        $assetTable->name = $assetName;
+        $assetTable->title = $title !== '' ? $title : ('Article ' . $articleId);
+        $assetTable->rules = '{}';
+        $assetTable->created_user_id = $userId;
+        if ($assetTable->check() && $assetTable->store()) {
+            $assetUpdate = (object) ['id' => $articleId, 'asset_id' => (int) $assetTable->id];
+            $db->updateObject('#__content', $assetUpdate, 'id');
+        }
+    }
+
+    private static function ensureArticleUcmContent($db, int $articleId): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $columns = self::getTableColumns($db, '#__ucm_content');
+        if (empty($columns)) {
+            return;
+        }
+
+        $content = $db->setQuery(
+            $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->where('id=' . (int) $articleId)
+        )->loadObject();
+        if (!$content) {
+            return;
+        }
+
+        $typeId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('type_id')
+                ->from('#__content_types')
+                ->where('type_alias=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        $exists = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('core_content_id')
+                ->from('#__ucm_content')
+                ->where('core_content_id=' . (int) $articleId)
+                ->where('core_type_alias=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        $coreBody = (string) ($content->introtext ?? '') . (string) ($content->fulltext ?? '');
+        $data = [
+            'core_content_id' => (int) $articleId,
+            'core_type_alias' => 'com_content.article',
+            'core_type_id' => $typeId,
+            'core_title' => (string) ($content->title ?? ''),
+            'core_alias' => (string) ($content->alias ?? ''),
+            'core_body' => $coreBody,
+            'core_state' => (int) ($content->state ?? 1),
+            'core_access' => (int) ($content->access ?? 1),
+            'core_params' => (string) ($content->attribs ?? ''),
+            'core_featured' => (int) ($content->featured ?? 0),
+            'core_metadata' => (string) ($content->metadata ?? ''),
+            'core_created_time' => (string) ($content->created ?? ''),
+            'core_modified_time' => (string) ($content->modified ?? ''),
+            'core_publish_up' => (string) ($content->publish_up ?? ''),
+            'core_publish_down' => (string) ($content->publish_down ?? ''),
+            'core_language' => (string) ($content->language ?? '*'),
+            'core_author_id' => (int) ($content->created_by ?? 0),
+            'core_images' => (string) ($content->images ?? ''),
+            'core_urls' => (string) ($content->urls ?? ''),
+            'core_version' => (int) ($content->version ?? 1),
+            'core_ordering' => (int) ($content->ordering ?? 0),
+            'core_hits' => (int) ($content->hits ?? 0),
+            'core_catid' => (int) ($content->catid ?? 0),
+            'core_asset_id' => (int) ($content->asset_id ?? 0),
+            'core_checked_out_time' => (string) ($content->checked_out_time ?? ''),
+            'core_checked_out_user_id' => (int) ($content->checked_out ?? 0),
+        ];
+
+        $payload = [];
+        foreach ($data as $field => $value) {
+            if (isset($columns[$field])) {
+                $payload[$field] = $value;
+            }
+        }
+        if (empty($payload)) {
+            return;
+        }
+
+        $object = (object) $payload;
+        if ($exists) {
+            $db->updateObject('#__ucm_content', $object, 'core_content_id');
+        } else {
+            $db->insertObject('#__ucm_content', $object);
+        }
+    }
+
+    private static function ensureArticleWorkflowAssociation($db, int $articleId): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $columns = self::getTableColumns($db, '#__workflow_associations');
+        if (empty($columns)) {
+            return;
+        }
+
+        $exists = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('item_id')
+                ->from('#__workflow_associations')
+                ->where('item_id=' . (int) $articleId)
+                ->where('extension=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        if ($exists) {
+            return;
+        }
+
+        $stageColumns = self::getTableColumns($db, '#__workflow_stages');
+        $stageQuery = $db->getQuery(true)
+            ->select('id')
+            ->from('#__workflow_stages')
+            ->where('published=1');
+        if (isset($stageColumns['extension'])) {
+            $stageQuery->where('extension=' . $db->quote('com_content'));
+        } elseif (isset($stageColumns['scope'])) {
+            $stageQuery->where('scope=' . $db->quote('com_content'));
+        }
+        $stageQuery->order('ordering ASC');
+        $stageId = (int) $db->setQuery($stageQuery)->loadResult();
+        if ($stageId <= 0) {
+            $stageId = (int) $db->setQuery(
+                $db->getQuery(true)
+                    ->select('id')
+                    ->from('#__workflow_stages')
+                    ->order('ordering ASC')
+            )->loadResult();
+        }
+
+        if ($stageId <= 0) {
+            return;
+        }
+
+        $payload = (object) [
+            'item_id' => $articleId,
+            'stage_id' => $stageId,
+            'extension' => 'com_content.article',
+        ];
+        $db->insertObject('#__workflow_associations', $payload);
+    }
+
+    private static function getTableColumns($db, string $table): array
+    {
+        try {
+            $columns = $db->getTableColumns($table, false);
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        return is_array($columns) ? $columns : [];
     }
 }
