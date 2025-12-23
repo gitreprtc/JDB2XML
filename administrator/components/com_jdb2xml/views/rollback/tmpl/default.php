@@ -3,6 +3,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Uri\Uri;
 
 require_once __DIR__ . '/../../../helpers/rollback.php';
 
@@ -12,6 +13,9 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
 ?>
 
 <div class="jdb2xml">
+  <div class="jdb2xml-brand">
+    <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+  </div>
   <h2>Rollback</h2>
   <div class="jdb2xml-section">
     <h3>Categories</h3>
@@ -381,6 +385,8 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
       <?php endforeach; ?>
     <?php endif; ?>
   </div>
+
+  <div class="jdb2xml-copyright">Copyright Robin Colbers</div>
 </div>
 
 <style>
@@ -408,4 +414,7 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
 .jdb2xml-path code, .jdb2xml code { font-size: 12px; white-space: nowrap; }
 .jdb2xml-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .jdb2xml-badge-cell { justify-self: start; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>

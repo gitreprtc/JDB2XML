@@ -1,9 +1,14 @@
 <?php
 // Copyright Robin Colbers.
 defined('_JEXEC') or die;
+
+use Joomla\CMS\Uri\Uri;
 ?>
 
 <div class="jdb2xml-import-automatic">
+  <div class="jdb2xml-brand">
+    <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+  </div>
   <h2>Automatic Import</h2>
 
   <div class="jdb2xml-import-section">
@@ -101,6 +106,8 @@ defined('_JEXEC') or die;
       </table>
     <?php endif; ?>
   </div>
+
+  <div class="jdb2xml-copyright">Copyright Robin Colbers</div>
 </div>
 
 <style>
@@ -120,4 +127,7 @@ defined('_JEXEC') or die;
 .jdb2xml-import-status-success { background: #e8f5e9; color: #1b5e20; }
 .jdb2xml-import-status-failed { background: #ffebee; color: #b71c1c; }
 .jdb2xml-empty { color: #666; font-style: italic; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>

@@ -5,6 +5,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
 
 $app = Factory::getApplication();
 $input = $app->input;
@@ -149,6 +150,9 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
   <?php echo HTMLHelper::_('form.token'); ?>
 
   <div class="jdb2xml">
+    <div class="jdb2xml-brand">
+      <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+    </div>
     <h2>Preview</h2>
 
 <div class="jdb2xml-filebar">
@@ -342,7 +346,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
     <?php endif; ?>
   </div>
 </form>
-<div class="jdb2xml-footer">Copyright Robin Colbers.</div>
+<div class="jdb2xml-footer">Copyright Robin Colbers</div>
 
 <style>
 .jdb2xml { padding: 8px 0; }
@@ -392,6 +396,8 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {

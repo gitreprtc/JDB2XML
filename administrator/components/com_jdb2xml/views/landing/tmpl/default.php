@@ -6,6 +6,9 @@ use Joomla\CMS\Uri\Uri;
 ?>
 
 <div class="jdb2xml-landing">
+  <div class="jdb2xml-brand">
+    <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+  </div>
   <div class="jdb2xml-landing-links">
     <a class="btn btn-primary" href="index.php?option=com_jdb2xml&view=controlpanel">Manual Import</a>
     <a class="btn btn-secondary jdb2xml-hidden" href="index.php?option=com_jdb2xml&view=importautomatic">Automatic Import</a>
@@ -66,6 +69,8 @@ use Joomla\CMS\Uri\Uri;
     </ol>
     <p>Import and export schedules use the same runner URL.</p>
   </div>
+
+  <div class="jdb2xml-copyright">Copyright Robin Colbers</div>
 </div>
 
 <style>
@@ -76,5 +81,8 @@ use Joomla\CMS\Uri\Uri;
 .jdb2xml-btn-rollback { background-color: #c62828; border-color: #b71c1c; color: #fff; }
 .jdb2xml-btn-rollback:hover { background-color: #b71c1c; border-color: #b71c1c; color: #fff; }
 .jdb2xml-landing-paths { margin-top: 12px; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 .jdb2xml-hidden { display: none; }
 </style>

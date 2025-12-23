@@ -1,9 +1,14 @@
 <?php
 // Copyright Robin Colbers.
 defined('_JEXEC') or die;
+
+use Joomla\CMS\Uri\Uri;
 ?>
 
 <div class="jdb2xml-export">
+  <div class="jdb2xml-brand">
+    <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+  </div>
   <h2>Export</h2>
 
   <div class="jdb2xml-export-section">
@@ -49,6 +54,7 @@ defined('_JEXEC') or die;
       </div>
     </div>
   </div>
+  <div class="jdb2xml-copyright">Copyright Robin Colbers</div>
 </div>
 
 <style>
@@ -58,4 +64,7 @@ defined('_JEXEC') or die;
 .jdb2xml-export-row { display: flex; align-items: center; gap: 8px; }
 .jdb2xml-export-row form { margin: 0; }
 .jdb2xml-export-label { font-weight: 600; min-width: 220px; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>
