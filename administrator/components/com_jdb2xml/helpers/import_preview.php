@@ -58,7 +58,9 @@ class Jdb2xmlImportPreviewHelper
 
             if (isset($xml->phocagallerytags)) {
                 self::previewPhocaGalleryTags($db, $xml->phocagallerytags, $result[$fileKey]);
-            } elseif ($xml->getName() === 'phocagallerytags') {
+            } elseif (isset($xml->phocagallerycategories)) {
+                self::previewPhocaGalleryTags($db, $xml->phocagallerycategories, $result[$fileKey]);
+            } elseif (in_array($xml->getName(), ['phocagallerytags', 'phocagallerycategories'], true)) {
                 self::previewPhocaGalleryTags($db, $xml, $result[$fileKey]);
             }
 
@@ -325,7 +327,14 @@ class Jdb2xmlImportPreviewHelper
             return;
         }
 
-        foreach ($tags->tag as $node) {
+        $entries = [];
+        if (isset($tags->tag)) {
+            $entries = $tags->tag;
+        } elseif (isset($tags->category)) {
+            $entries = $tags->category;
+        }
+
+        foreach ($entries as $node) {
             $id = (int) ($node->id ?? 0);
             $alias = trim((string) ($node->alias ?? ''));
             $title = (string) ($node->title ?? $alias);

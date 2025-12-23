@@ -169,7 +169,10 @@ class Jdb2xmlImportHelper
                         if (isset($xml->phocagallerytags)) {
                             self::importPhocaGalleryTags($db, $xml->phocagallerytags, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
                             $summaries['phoca_tags'] = true;
-                        } elseif ($xml->getName() === 'phocagallerytags') {
+                        } elseif (isset($xml->phocagallerycategories)) {
+                            self::importPhocaGalleryTags($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
+                        } elseif (in_array($xml->getName(), ['phocagallerytags', 'phocagallerycategories'], true)) {
                             self::importPhocaGalleryTags($db, $xml, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
                             $summaries['phoca_tags'] = true;
                         }
@@ -438,7 +441,14 @@ class Jdb2xmlImportHelper
             return;
         }
 
-        foreach ($tags->tag as $node) {
+        $entries = [];
+        if (isset($tags->tag)) {
+            $entries = $tags->tag;
+        } elseif (isset($tags->category)) {
+            $entries = $tags->category;
+        }
+
+        foreach ($entries as $node) {
             $id = (int) ($node->id ?? 0);
             $alias = trim((string) ($node->alias ?? ''));
             $key = $alias !== '' ? $alias : (string) $id;
