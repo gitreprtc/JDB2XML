@@ -50,6 +50,12 @@ class Jdb2xmlImportHelper
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
         $preview = $app->getUserState('com_jdb2xml.preview');
+        if ((!is_array($preview) || $preview === []) && $selectedFile) {
+            $preview = $app->getUserState('com_jdb2xml.preview.' . $selectedFile);
+        }
+        if ($selectedFile && is_array($preview) && !isset($preview[$selectedFile]) && array_key_exists('categories', $preview)) {
+            $preview = [$selectedFile => $preview];
+        }
         $planMap = [];
         if (is_array($preview)) {
             foreach ($preview as $fileKey => $data) {
