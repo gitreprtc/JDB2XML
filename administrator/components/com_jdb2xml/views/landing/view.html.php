@@ -21,6 +21,5 @@ class Jdb2xmlViewLanding extends HtmlView
     protected function addToolbar(): void
     {
         ToolbarHelper::title('JDB2XML', 'stack');
-        ToolbarHelper::link('index.php?option=com_jdb2xml&view=landing', 'Main menu', 'home');
     }
 }
