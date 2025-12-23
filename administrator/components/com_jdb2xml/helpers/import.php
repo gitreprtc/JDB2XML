@@ -829,7 +829,8 @@ class Jdb2xmlImportHelper
         )->loadResult();
 
         if ($assetId > 0) {
-            $db->updateObject('#__content', (object) ['id' => $articleId, 'asset_id' => $assetId], 'id');
+            $assetUpdate = (object) ['id' => $articleId, 'asset_id' => $assetId];
+            $db->updateObject('#__content', $assetUpdate, 'id');
             return;
         }
 
@@ -861,7 +862,8 @@ class Jdb2xmlImportHelper
         $assetTable->rules = '{}';
         $assetTable->created_user_id = $userId;
         if ($assetTable->check() && $assetTable->store()) {
-            $db->updateObject('#__content', (object) ['id' => $articleId, 'asset_id' => (int) $assetTable->id], 'id');
+            $assetUpdate = (object) ['id' => $articleId, 'asset_id' => (int) $assetTable->id];
+            $db->updateObject('#__content', $assetUpdate, 'id');
         }
     }
 
