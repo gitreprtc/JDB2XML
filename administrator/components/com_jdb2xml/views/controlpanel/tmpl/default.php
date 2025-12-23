@@ -349,7 +349,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 <div class="jdb2xml-footer">Copyright Robin Colbers</div>
 
 <style>
-.jdb2xml { padding: 8px 0; }
+.jdb2xml { padding: 8px 0; position: relative; padding-right: 260px; }
 .jdb2xml-file { margin: 14px 0; padding: 10px 0; border-top: 1px solid #eee; }
 .jdb2xml-grid { display:flex; gap: 18px; align-items:flex-start; }
 .jdb2xml-left { flex: 1 1 65%; min-width: 380px; }
@@ -396,7 +396,7 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
 .jdb2xml-tags { margin: 8px 0 0 0; padding-left: 18px; }
 .jdb2xml-tags li { margin: 6px 0; }
 .jdb2xml-footer { margin-top: 16px; font-size: 12px; color: #666; }
-.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; }
 .jdb2xml-brand img { max-width: 220px; height: auto; }
 </style>
 <script>

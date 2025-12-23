@@ -76,13 +76,13 @@ use Joomla\CMS\Uri\Uri;
 </div>
 
 <style>
-.jdb2xml-tagconversion { padding: 16px 0; }
+.jdb2xml-tagconversion { padding: 16px 0; position: relative; padding-right: 260px; }
 .jdb2xml-tagconversion-form { margin-top: 12px; }
 .jdb2xml-tagconversion-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .jdb2xml-tagconversion-section { margin-top: 18px; }
 .jdb2xml-tagconversion-divider { margin: 20px 0; border-top: 1px solid #e5e5e5; }
 .jdb2xml-tagconversion-status { margin: 8px 0 0; color: #555; font-size: 12px; }
-.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; }
 .jdb2xml-brand img { max-width: 220px; height: auto; }
 .jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>

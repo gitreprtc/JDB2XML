@@ -3,7 +3,6 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use DateTime;
 
 class Jdb2xmlRollbackHelper
 {
@@ -169,7 +168,7 @@ class Jdb2xmlRollbackHelper
     private static function formatTimestamp(string $file): string
     {
         if (preg_match('/jdb2xml_rollback_(\d{8}_\d{6})\\.json$/', $file, $matches)) {
-            $dt = DateTime::createFromFormat('Ymd_His', $matches[1]);
+            $dt = \DateTime::createFromFormat('Ymd_His', $matches[1]);
             if ($dt) {
                 return $dt->format('d-m-Y H:i:s');
             }

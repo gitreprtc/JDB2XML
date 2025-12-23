@@ -58,13 +58,13 @@ use Joomla\CMS\Uri\Uri;
 </div>
 
 <style>
-.jdb2xml-export { padding: 16px 0; }
+.jdb2xml-export { padding: 16px 0; position: relative; padding-right: 260px; }
 .jdb2xml-export-section { margin-bottom: 18px; }
 .jdb2xml-export-list { display: flex; flex-direction: column; gap: 10px; }
 .jdb2xml-export-row { display: flex; align-items: center; gap: 8px; }
 .jdb2xml-export-row form { margin: 0; }
 .jdb2xml-export-label { font-weight: 600; min-width: 220px; }
-.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; }
 .jdb2xml-brand img { max-width: 220px; height: auto; }
 .jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>

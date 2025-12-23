@@ -390,7 +390,7 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
 </div>
 
 <style>
-.jdb2xml { padding: 8px 0; }
+.jdb2xml { padding: 8px 0; position: relative; padding-right: 260px; }
 .jdb2xml-section { margin-bottom: 18px; }
 .jdb2xml-rollback-item { margin: 10px 0; border: 1px solid #e5e5e5; padding: 8px 12px; border-radius: 6px; }
 .jdb2xml-rollback-item summary { cursor: pointer; font-weight: 600; }
@@ -414,7 +414,7 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
 .jdb2xml-path code, .jdb2xml code { font-size: 12px; white-space: nowrap; }
 .jdb2xml-badge { display:inline-block; padding:2px 7px; border:1px solid #ccc; border-radius:999px; font-size:12px; }
 .jdb2xml-badge-cell { justify-self: start; }
-.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; }
 .jdb2xml-brand img { max-width: 220px; height: auto; }
 .jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>

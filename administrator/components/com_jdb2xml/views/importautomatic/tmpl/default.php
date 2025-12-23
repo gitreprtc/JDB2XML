@@ -111,7 +111,7 @@ use Joomla\CMS\Uri\Uri;
 </div>
 
 <style>
-.jdb2xml-import-automatic { padding: 16px 0; }
+.jdb2xml-import-automatic { padding: 16px 0; position: relative; padding-right: 260px; }
 .jdb2xml-import-section { margin-bottom: 18px; }
 .jdb2xml-import-form { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 .jdb2xml-import-schedule { display: grid; gap: 8px; }
@@ -127,7 +127,7 @@ use Joomla\CMS\Uri\Uri;
 .jdb2xml-import-status-success { background: #e8f5e9; color: #1b5e20; }
 .jdb2xml-import-status-failed { background: #ffebee; color: #b71c1c; }
 .jdb2xml-empty { color: #666; font-style: italic; }
-.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; }
 .jdb2xml-brand img { max-width: 220px; height: auto; }
 .jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>
