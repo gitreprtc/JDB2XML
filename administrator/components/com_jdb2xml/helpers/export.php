@@ -3,7 +3,6 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Throwable;
 
 class Jdb2xmlExportHelper
 {

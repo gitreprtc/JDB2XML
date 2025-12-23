@@ -55,7 +55,7 @@ defined('_JEXEC') or die;
 .jdb2xml-export { padding: 16px 0; }
 .jdb2xml-export-section { margin-bottom: 18px; }
 .jdb2xml-export-list { display: flex; flex-direction: column; gap: 10px; }
-.jdb2xml-export-row { display: grid; grid-template-columns: minmax(220px, 1fr) auto; align-items: center; column-gap: 12px; }
+.jdb2xml-export-row { display: flex; align-items: center; gap: 8px; }
 .jdb2xml-export-row form { margin: 0; }
-.jdb2xml-export-label { font-weight: 600; }
+.jdb2xml-export-label { font-weight: 600; min-width: 220px; }
 </style>

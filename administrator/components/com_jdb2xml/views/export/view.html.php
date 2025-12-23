@@ -6,7 +6,6 @@ use Joomla\CMS\MVC\View\HtmlView;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Toolbar\ToolbarHelper;
-use Throwable;
 
 class Jdb2xmlViewExport extends HtmlView
 {
@@ -19,7 +18,7 @@ class Jdb2xmlViewExport extends HtmlView
         $db = Factory::getDbo();
         try {
             $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $phocaColumns = [];
         }
         $this->phocaAvailable = !empty($phocaColumns);
