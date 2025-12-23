@@ -820,7 +820,26 @@ class Jdb2xmlImportHelper
             return;
         }
 
+        $currentAssetId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('asset_id')
+                ->from('#__content')
+                ->where('id=' . (int) $articleId)
+        )->loadResult();
+
         $assetName = 'com_content.article.' . $articleId;
+        if ($currentAssetId > 0) {
+            $assetRow = $db->setQuery(
+                $db->getQuery(true)
+                    ->select($db->quoteName(['id', 'name']))
+                    ->from('#__assets')
+                    ->where('id=' . (int) $currentAssetId)
+            )->loadAssoc();
+            if ($assetRow && (string) ($assetRow['name'] ?? '') === $assetName) {
+                return;
+            }
+        }
+
         $assetId = (int) $db->setQuery(
             $db->getQuery(true)
                 ->select('id')
@@ -849,6 +868,9 @@ class Jdb2xmlImportHelper
                     ->from('#__assets')
                     ->where('name=' . $db->quote('com_content'))
             )->loadResult();
+        }
+        if ($parentId <= 0) {
+            $parentId = 1;
         }
 
         $assetTable = Table::getInstance('Asset');
