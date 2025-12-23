@@ -739,6 +739,7 @@ class Jdb2xmlImportHelper
                         ];
                         $db->updateObject('#__content', $override, 'id');
                         self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
+                        self::ensureArticleUcmContent($db, (int) $existing->id);
                         $rollback['updated']['articles'][] = $before;
                     }
                     $changed++;
@@ -803,6 +804,7 @@ class Jdb2xmlImportHelper
             ];
             $db->updateObject('#__content', $override, 'id');
             self::ensureArticleAsset($db, (int) $table->id, $catid, $userId, (string) ($node->title ?? $alias));
+            self::ensureArticleUcmContent($db, (int) $table->id);
 
             $rollback['created']['articles'][] = (int) $table->id;
             $created++;
@@ -886,6 +888,90 @@ class Jdb2xmlImportHelper
         if ($assetTable->check() && $assetTable->store()) {
             $assetUpdate = (object) ['id' => $articleId, 'asset_id' => (int) $assetTable->id];
             $db->updateObject('#__content', $assetUpdate, 'id');
+        }
+    }
+
+    private static function ensureArticleUcmContent($db, int $articleId): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $columns = self::getTableColumns($db, '#__ucm_content');
+        if (empty($columns)) {
+            return;
+        }
+
+        $content = $db->setQuery(
+            $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->where('id=' . (int) $articleId)
+        )->loadObject();
+        if (!$content) {
+            return;
+        }
+
+        $typeId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('type_id')
+                ->from('#__content_types')
+                ->where('type_alias=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        $exists = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('core_content_id')
+                ->from('#__ucm_content')
+                ->where('core_content_id=' . (int) $articleId)
+                ->where('core_type_alias=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        $coreBody = (string) ($content->introtext ?? '') . (string) ($content->fulltext ?? '');
+        $data = [
+            'core_content_id' => (int) $articleId,
+            'core_type_alias' => 'com_content.article',
+            'core_type_id' => $typeId,
+            'core_title' => (string) ($content->title ?? ''),
+            'core_alias' => (string) ($content->alias ?? ''),
+            'core_body' => $coreBody,
+            'core_state' => (int) ($content->state ?? 1),
+            'core_access' => (int) ($content->access ?? 1),
+            'core_params' => (string) ($content->attribs ?? ''),
+            'core_featured' => (int) ($content->featured ?? 0),
+            'core_metadata' => (string) ($content->metadata ?? ''),
+            'core_created_time' => (string) ($content->created ?? ''),
+            'core_modified_time' => (string) ($content->modified ?? ''),
+            'core_publish_up' => (string) ($content->publish_up ?? ''),
+            'core_publish_down' => (string) ($content->publish_down ?? ''),
+            'core_language' => (string) ($content->language ?? '*'),
+            'core_author_id' => (int) ($content->created_by ?? 0),
+            'core_images' => (string) ($content->images ?? ''),
+            'core_urls' => (string) ($content->urls ?? ''),
+            'core_version' => (int) ($content->version ?? 1),
+            'core_ordering' => (int) ($content->ordering ?? 0),
+            'core_hits' => (int) ($content->hits ?? 0),
+            'core_catid' => (int) ($content->catid ?? 0),
+            'core_asset_id' => (int) ($content->asset_id ?? 0),
+            'core_checked_out_time' => (string) ($content->checked_out_time ?? ''),
+            'core_checked_out_user_id' => (int) ($content->checked_out ?? 0),
+        ];
+
+        $payload = [];
+        foreach ($data as $field => $value) {
+            if (isset($columns[$field])) {
+                $payload[$field] = $value;
+            }
+        }
+        if (empty($payload)) {
+            return;
+        }
+
+        $object = (object) $payload;
+        if ($exists) {
+            $db->updateObject('#__ucm_content', $object, 'core_content_id');
+        } else {
+            $db->insertObject('#__ucm_content', $object);
         }
     }
 
