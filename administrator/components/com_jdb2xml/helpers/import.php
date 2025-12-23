@@ -481,6 +481,9 @@ class Jdb2xmlImportHelper
                 'approved' => (string) ($node->approved ?? '1'),
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
+                'accessuserid' => '0',
+                'uploaduserid' => '0',
+                'deleteuserid' => '0',
                 'language' => (string) ($node->language ?? ''),
                 'ordering' => (string) ($node->ordering ?? ''),
                 'parent_id' => $parentId,
@@ -534,6 +537,14 @@ class Jdb2xmlImportHelper
                         }
                         continue;
                     }
+                    if (in_array($field, ['accessuserid', 'uploaduserid', 'deleteuserid'], true)) {
+                        if ((string) $dbVal !== (string) $value) {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = (int) $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
                     if ($value === '') {
                         continue;
                     }
@@ -570,6 +581,9 @@ class Jdb2xmlImportHelper
                 'approved' => isset($node->approved) ? (int) $node->approved : 1,
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
+                'accessuserid' => 0,
+                'uploaduserid' => 0,
+                'deleteuserid' => 0,
                 'language' => (string) ($node->language ?? '*'),
                 'ordering' => (int) ($node->ordering ?? 0),
                 'description' => (string) ($node->description ?? ''),

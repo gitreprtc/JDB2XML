@@ -108,6 +108,9 @@ class Jdb2xmlExportHelper
                 $n->addChild('ordering', (int) ($t->ordering ?? 0));
                 $n->addChild('published', (int) ($t->published ?? 1));
                 $n->addChild('access', (int) ($t->access ?? 1));
+                $n->addChild('accessuserid', (int) ($t->accessuserid ?? 0));
+                $n->addChild('uploaduserid', (int) ($t->uploaduserid ?? 0));
+                $n->addChild('deleteuserid', (int) ($t->deleteuserid ?? 0));
                 $n->addChild('language', (string) ($t->language ?? '*'));
 
                 self::addCdata($n, 'description', (string) ($t->description ?? ''));

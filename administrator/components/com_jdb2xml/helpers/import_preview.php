@@ -386,6 +386,9 @@ class Jdb2xmlImportPreviewHelper
                 'metadata' => (string) ($node->metadata ?? ''),
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
+                'accessuserid' => '0',
+                'uploaduserid' => '0',
+                'deleteuserid' => '0',
                 'language' => (string) ($node->language ?? ''),
                 'ordering' => (string) ($node->ordering ?? ''),
             ];
