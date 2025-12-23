@@ -740,6 +740,7 @@ class Jdb2xmlImportHelper
                         $db->updateObject('#__content', $override, 'id');
                         self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
                         self::ensureArticleUcmContent($db, (int) $existing->id);
+                        self::ensureArticleWorkflowAssociation($db, (int) $existing->id);
                         $rollback['updated']['articles'][] = $before;
                     }
                     $changed++;
@@ -805,6 +806,7 @@ class Jdb2xmlImportHelper
             $db->updateObject('#__content', $override, 'id');
             self::ensureArticleAsset($db, (int) $table->id, $catid, $userId, (string) ($node->title ?? $alias));
             self::ensureArticleUcmContent($db, (int) $table->id);
+            self::ensureArticleWorkflowAssociation($db, (int) $table->id);
 
             $rollback['created']['articles'][] = (int) $table->id;
             $created++;
@@ -973,6 +975,58 @@ class Jdb2xmlImportHelper
         } else {
             $db->insertObject('#__ucm_content', $object);
         }
+    }
+
+    private static function ensureArticleWorkflowAssociation($db, int $articleId): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $columns = self::getTableColumns($db, '#__workflow_associations');
+        if (empty($columns)) {
+            return;
+        }
+
+        $exists = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('item_id')
+                ->from('#__workflow_associations')
+                ->where('item_id=' . (int) $articleId)
+                ->where('extension=' . $db->quote('com_content.article'))
+        )->loadResult();
+
+        if ($exists) {
+            return;
+        }
+
+        $stageId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from('#__workflow_stages')
+                ->where('extension=' . $db->quote('com_content'))
+                ->where('published=1')
+                ->order('ordering ASC')
+        )->loadResult();
+        if ($stageId <= 0) {
+            $stageId = (int) $db->setQuery(
+                $db->getQuery(true)
+                    ->select('id')
+                    ->from('#__workflow_stages')
+                    ->order('ordering ASC')
+            )->loadResult();
+        }
+
+        if ($stageId <= 0) {
+            return;
+        }
+
+        $payload = (object) [
+            'item_id' => $articleId,
+            'stage_id' => $stageId,
+            'extension' => 'com_content.article',
+        ];
+        $db->insertObject('#__workflow_associations', $payload);
     }
 
     private static function getTableColumns($db, string $table): array
