@@ -260,8 +260,21 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/export.php';
         $app = $this->getApplicationWithTokenCheck();
         $type = $app->input->getCmd('export_type', 'all');
-        if (!in_array($type, ['categories', 'tags', 'articles'], true)) {
+        if (!in_array($type, ['categories', 'tags', 'articles', 'phocagallerycategories'], true)) {
             $type = 'all';
+        }
+        if ($type === 'phocagallerycategories') {
+            $db = Factory::getDbo();
+            try {
+                $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+            } catch (Throwable $e) {
+                $phocaColumns = [];
+            }
+            if (empty($phocaColumns)) {
+                $app->enqueueMessage('Phoca Gallery not available; nothing to export.', 'warning');
+                $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+                return;
+            }
         }
 
         try {
@@ -303,20 +316,34 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/tag_conversion.php';
 
         try {
-            if ($type === 'categories') {
-                $result = Jdb2xmlTagConversionHelper::convertCsvToCategoriesXml($file['tmp_name']);
-            } else {
-                $result = Jdb2xmlTagConversionHelper::convertCsvToTagsXml($file['tmp_name']);
-            }
+        if ($type === 'categories') {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToCategoriesXml($file['tmp_name']);
+        } elseif ($type === 'articles') {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToArticlesXml($file['tmp_name']);
+        } else {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToTagsXml($file['tmp_name']);
+        }
             $safeBase = File::makeSafe(pathinfo((string) $file['name'], PATHINFO_FILENAME));
             $timestamp = date('Ymd_His');
-            $prefix = $type === 'categories' ? 'categories' : 'tags';
+        if ($type === 'categories') {
+            $prefix = 'categories';
+        } elseif ($type === 'articles') {
+            $prefix = 'articles';
+        } else {
+            $prefix = 'tags';
+        }
             $filename = ($safeBase !== '' ? $safeBase . '_' : '') . $prefix . '_conversie_' . $timestamp . '.xml';
 
             $targetPath = $importDir . '/' . $filename;
             File::write($targetPath, $result['xml']);
 
-            $label = $type === 'categories' ? 'categories' : 'tags';
+        if ($type === 'categories') {
+            $label = 'categories';
+        } elseif ($type === 'articles') {
+            $label = 'articles';
+        } else {
+            $label = 'tags';
+        }
             $app->enqueueMessage('CSV conversion created ' . (int) $result['count'] . ' ' . $label . ' and saved ' . $filename . ' to the import folder.', 'message');
         } catch (Throwable $e) {
             $app->enqueueMessage('CSV conversion error: ' . $e->getMessage(), 'error');

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" role="img" aria-label="JDB2XML logo">
+  <rect width="800" height="320" fill="#0b0b0b"/>
+  <rect x="40" y="60" width="620" height="160" fill="none" stroke="#f3b400" stroke-width="8"/>
+  <polygon points="520,220 760,220 760,300 440,300" fill="#f3b400"/>
+  <text x="80" y="170" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="96" fill="#ffffff">JDB</text>
+  <text x="290" y="170" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="96" fill="#f3b400">2</text>
+  <text x="350" y="170" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="96" fill="#ffffff">XML</text>
+  <text x="560" y="260" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="#1a1a1a" text-anchor="middle">created by</text>
+  <text x="600" y="295" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="30" fill="#1a1a1a">ROBIN COLBERS</text>
+</svg>

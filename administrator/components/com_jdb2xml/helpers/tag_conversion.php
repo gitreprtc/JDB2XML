@@ -27,7 +27,7 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false) {
+        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['title', 'tag', 'tags', 'metadata', 'metakey', 'meta'])) {
             self::consumeRow($firstRow, $tags, $order);
         }
 
@@ -103,7 +103,7 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false) {
+        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['categorie', 'categories', 'category', 'level', 'niveau', 'path', 'title', 'alias'])) {
             self::consumeCategoryRow($firstRow, $categories, $order);
         }
 
@@ -168,6 +168,122 @@ class Jdb2xmlTagConversionHelper
         return [
             'xml' => $dom->saveXML(),
             'count' => $id - 1,
+        ];
+    }
+
+    public static function convertCsvToArticlesXml(string $csvPath): array
+    {
+        if (!is_file($csvPath)) {
+            throw new RuntimeException('CSV file not found.');
+        }
+
+        $handle = fopen($csvPath, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to read CSV file.');
+        }
+
+        $delimiter = ',';
+        $firstRow = fgetcsv($handle, 0, $delimiter);
+        if ($firstRow !== false && count($firstRow) === 1 && strpos((string) $firstRow[0], ';') !== false) {
+            $delimiter = ';';
+            $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
+        }
+
+        if ($firstRow === false) {
+            fclose($handle);
+            return ['xml' => '', 'count' => 0];
+        }
+
+        $headers = array_map('trim', $firstRow);
+        if (!empty($headers)) {
+            $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $headers[0]);
+        }
+        $headers = array_map('mb_strtolower', $headers);
+
+        $rows = [];
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (count($row) === 1 && $delimiter === ';' && strpos((string) $row[0], ';') !== false) {
+                $row = str_getcsv((string) $row[0], $delimiter);
+            }
+            $rows[] = $row;
+        }
+        fclose($handle);
+
+        $fields = [
+            'catid',
+            'title',
+            'alias',
+            'introtext',
+            'fulltext',
+            'state',
+            'access',
+            'language',
+            'created_by',
+            'created_by_alias',
+            'modified_by',
+            'ordering',
+            'featured',
+            'hits',
+            'images',
+            'urls',
+            'attribs',
+            'metadata',
+            'metadesc',
+            'metakey',
+            'note',
+        ];
+
+        $headerMap = [];
+        foreach ($headers as $index => $header) {
+            $key = trim((string) $header);
+            if ($key !== '' && in_array($key, $fields, true)) {
+                $headerMap[$key] = $index;
+            }
+        }
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+        $root = $dom->createElement('articles');
+        $dom->appendChild($root);
+
+        $count = 0;
+        foreach ($rows as $row) {
+            $rowValues = [];
+            foreach ($fields as $field) {
+                if (isset($headerMap[$field])) {
+                    $value = $row[$headerMap[$field]] ?? '';
+                    $rowValues[$field] = trim((string) $value);
+                } else {
+                    $rowValues[$field] = '';
+                }
+            }
+
+            $nonEmpty = array_filter($rowValues, static function ($value) {
+                return $value !== '';
+            });
+            if (empty($nonEmpty)) {
+                continue;
+            }
+
+            $articleNode = $dom->createElement('article');
+            foreach ($fields as $field) {
+                $value = $rowValues[$field];
+                if (in_array($field, ['introtext', 'fulltext', 'images', 'urls', 'attribs', 'metadata', 'metadesc', 'metakey', 'note'], true)) {
+                    $node = $dom->createElement($field);
+                    $node->appendChild($dom->createCDATASection($value));
+                    $articleNode->appendChild($node);
+                } else {
+                    $articleNode->appendChild($dom->createElement($field, $value));
+                }
+            }
+
+            $root->appendChild($articleNode);
+            $count++;
+        }
+
+        return [
+            'xml' => $dom->saveXML(),
+            'count' => $count,
         ];
     }
 
@@ -277,6 +393,29 @@ class Jdb2xmlTagConversionHelper
             return !in_array($lower, ['land', 'provincie', 'naam', 'plaats'], true);
         }));
         return $values;
+    }
+
+    private static function isHeaderRow(array $row, array $needles): bool
+    {
+        $normalized = array_map(static function ($value) {
+            return mb_strtolower(trim((string) $value));
+        }, $row);
+
+        foreach ($normalized as $value) {
+            if ($value === '') {
+                continue;
+            }
+            if (in_array($value, $needles, true)) {
+                return true;
+            }
+            foreach ($needles as $needle) {
+                if ($needle !== '' && (str_starts_with($value, $needle . '_') || str_starts_with($value, $needle . '-'))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function slugify(string $value): string

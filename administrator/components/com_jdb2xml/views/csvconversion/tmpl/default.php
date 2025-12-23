@@ -3,12 +3,16 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Uri\Uri;
 
 ?>
 
 <div class="jdb2xml-tagconversion">
+  <div class="jdb2xml-brand">
+    <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
+  </div>
   <h2>CSV conversie</h2>
-  <p>Upload CSV-bestanden om tags en categorieën om te zetten naar het XML-formaat voor import.</p>
+  <p>Upload CSV-bestanden om tags, categorieën en artikelen om te zetten naar het XML-formaat voor import.</p>
 
   <div class="jdb2xml-tagconversion-section">
     <h3>Tags</h3>
@@ -47,6 +51,28 @@ use Joomla\CMS\HTML\HTMLHelper;
       </p>
     </form>
   </div>
+
+  <div class="jdb2xml-tagconversion-divider" role="presentation"></div>
+
+  <div class="jdb2xml-tagconversion-section">
+    <h3>Artikelen</h3>
+    <form action="index.php?option=com_jdb2xml" method="post" enctype="multipart/form-data" class="jdb2xml-tagconversion-form">
+      <input type="hidden" name="task" value="csvconversionupload">
+      <input type="hidden" name="conversion_type" value="articles">
+      <?php echo HTMLHelper::_('form.token'); ?>
+
+      <div class="jdb2xml-tagconversion-row">
+        <label for="csv_file_articles"><strong>CSV-bestand</strong></label>
+        <input type="file" name="csv_file" id="csv_file_articles" accept=".csv,text/csv">
+        <button type="submit" class="btn btn-primary">Maak XML</button>
+      </div>
+      <p class="jdb2xml-tagconversion-status" data-file-status="csv_file_articles">
+        Kies een CSV-bestand om te laden.
+      </p>
+    </form>
+  </div>
+
+  <div class="jdb2xml-copyright">Copyright Robin Colbers</div>
 </div>
 
 <style>
@@ -56,6 +82,9 @@ use Joomla\CMS\HTML\HTMLHelper;
 .jdb2xml-tagconversion-section { margin-top: 18px; }
 .jdb2xml-tagconversion-divider { margin: 20px 0; border-top: 1px solid #e5e5e5; }
 .jdb2xml-tagconversion-status { margin: 8px 0 0; color: #555; font-size: 12px; }
+.jdb2xml-brand { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 </style>
 
 <script>
