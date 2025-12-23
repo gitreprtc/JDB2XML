@@ -719,6 +719,14 @@ class Jdb2xmlImportHelper
                 if ($changedLocal) {
                     if (!$dryRun) {
                         $db->updateObject('#__content', $existing, 'id');
+                        $db->updateObject('#__content', (object) [
+                            'id' => (int) $existing->id,
+                            'created' => $now,
+                            'modified' => $now,
+                            'publish_up' => $now,
+                            'publish_down' => $nullDate,
+                            'note' => $noteText,
+                        ], 'id');
                         $rollback['updated']['articles'][] = $before;
                     }
                     $changed++;
@@ -768,6 +776,14 @@ class Jdb2xmlImportHelper
             if (!$table->store()) {
                 throw new RuntimeException('Article save failed: ' . $table->getError());
             }
+            $db->updateObject('#__content', (object) [
+                'id' => (int) $table->id,
+                'created' => $now,
+                'modified' => $now,
+                'publish_up' => $now,
+                'publish_down' => $nullDate,
+                'note' => $noteText,
+            ], 'id');
 
             $rollback['created']['articles'][] = (int) $table->id;
             $created++;
