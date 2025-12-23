@@ -1000,14 +1000,18 @@ class Jdb2xmlImportHelper
             return;
         }
 
-        $stageId = (int) $db->setQuery(
-            $db->getQuery(true)
-                ->select('id')
-                ->from('#__workflow_stages')
-                ->where('extension=' . $db->quote('com_content'))
-                ->where('published=1')
-                ->order('ordering ASC')
-        )->loadResult();
+        $stageColumns = self::getTableColumns($db, '#__workflow_stages');
+        $stageQuery = $db->getQuery(true)
+            ->select('id')
+            ->from('#__workflow_stages')
+            ->where('published=1');
+        if (isset($stageColumns['extension'])) {
+            $stageQuery->where('extension=' . $db->quote('com_content'));
+        } elseif (isset($stageColumns['scope'])) {
+            $stageQuery->where('scope=' . $db->quote('com_content'));
+        }
+        $stageQuery->order('ordering ASC');
+        $stageId = (int) $db->setQuery($stageQuery)->loadResult();
         if ($stageId <= 0) {
             $stageId = (int) $db->setQuery(
                 $db->getQuery(true)
