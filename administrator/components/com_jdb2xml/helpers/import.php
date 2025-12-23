@@ -738,6 +738,7 @@ class Jdb2xmlImportHelper
                             'note' => $noteText,
                         ];
                         $db->updateObject('#__content', $override, 'id');
+                        self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
                         $rollback['updated']['articles'][] = $before;
                     }
                     $changed++;
@@ -801,6 +802,7 @@ class Jdb2xmlImportHelper
                 'note' => $noteText,
             ];
             $db->updateObject('#__content', $override, 'id');
+            self::ensureArticleAsset($db, (int) $table->id, $catid, $userId, (string) ($node->title ?? $alias));
 
             $rollback['created']['articles'][] = (int) $table->id;
             $created++;
@@ -810,6 +812,57 @@ class Jdb2xmlImportHelper
     private static function buildArticleKey(string $alias, int $catid): string
     {
         return 'article:' . $catid . ':' . $alias;
+    }
+
+    private static function ensureArticleAsset($db, int $articleId, int $catid, int $userId, string $title): void
+    {
+        if ($articleId <= 0) {
+            return;
+        }
+
+        $assetName = 'com_content.article.' . $articleId;
+        $assetId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from('#__assets')
+                ->where('name=' . $db->quote($assetName))
+        )->loadResult();
+
+        if ($assetId > 0) {
+            $db->updateObject('#__content', (object) ['id' => $articleId, 'asset_id' => $assetId], 'id');
+            return;
+        }
+
+        $parentName = $catid > 0 ? 'com_content.category.' . $catid : 'com_content';
+        $parentId = (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from('#__assets')
+                ->where('name=' . $db->quote($parentName))
+        )->loadResult();
+
+        if ($parentId <= 0) {
+            $parentId = (int) $db->setQuery(
+                $db->getQuery(true)
+                    ->select('id')
+                    ->from('#__assets')
+                    ->where('name=' . $db->quote('com_content'))
+            )->loadResult();
+        }
+
+        $assetTable = Table::getInstance('Asset');
+        if ($assetTable === false) {
+            return;
+        }
+
+        $assetTable->parent_id = $parentId;
+        $assetTable->name = $assetName;
+        $assetTable->title = $title !== '' ? $title : ('Article ' . $articleId);
+        $assetTable->rules = '{}';
+        $assetTable->created_user_id = $userId;
+        if ($assetTable->check() && $assetTable->store()) {
+            $db->updateObject('#__content', (object) ['id' => $articleId, 'asset_id' => (int) $assetTable->id], 'id');
+        }
     }
 
     private static function getTableColumns($db, string $table): array
