@@ -26,8 +26,8 @@ class Jdb2xmlImportHelper
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
-            'updated' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
+            'created' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -42,10 +42,16 @@ class Jdb2xmlImportHelper
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
         $createdCats = $changedCats = $skippedCats = 0;
-        $createdPhocaCats = $changedPhocaCats = $skippedPhocaCats = 0;
+        $createdPhocaTags = $changedPhocaTags = $skippedPhocaTags = 0;
         $createdTags = $changedTags = $skippedTags = 0;
         $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
+        $summaries = [
+            'categories' => false,
+            'phoca_tags' => false,
+            'tags' => false,
+            'articles' => false,
+        ];
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
@@ -81,11 +87,11 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
-        $allowedPhocaCategorySet = null;
+        $allowedPhocaTagSet = null;
         $allowedArticleSet = null;
         $allowTags = true;
         $allowArticles = true;
-        $allowPhocaCategories = true;
+        $allowPhocaTags = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -110,16 +116,16 @@ class Jdb2xmlImportHelper
                     $allowedArticleSet[$key] = true;
                 }
 
-                $allowPhocaCategories = !empty($previewData['phocaCategories']) && is_array($previewData['phocaCategories']);
-                if ($allowPhocaCategories) {
-                    $allowedPhocaCategorySet = [];
-                    $rows = $previewData['phocaCategories'] ?? [];
+                $allowPhocaTags = !empty($previewData['phocaTags']) && is_array($previewData['phocaTags']);
+                if ($allowPhocaTags) {
+                    $allowedPhocaTagSet = [];
+                    $rows = $previewData['phocaTags'] ?? [];
                     foreach ($rows as $row) {
                         $key = (string)($row['path'] ?? $row['id'] ?? '');
                         if ($key === '' || isset($excludeSet[$key])) {
                             continue;
                         }
-                        $allowedPhocaCategorySet[$key] = true;
+                        $allowedPhocaTagSet[$key] = true;
                     }
                 }
             }
@@ -153,31 +159,39 @@ class Jdb2xmlImportHelper
 
                     if (isset($xml->categories)) {
                         self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        $summaries['categories'] = true;
                     } elseif ($xml->getName() === 'categories') {
                         self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        $summaries['categories'] = true;
                     }
 
-                    if ($allowPhocaCategories) {
-                        if (isset($xml->phocagallerycategories)) {
-                            self::importPhocaGalleryCategories($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
-                        } elseif ($xml->getName() === 'phocagallerycategories') {
-                            self::importPhocaGalleryCategories($db, $xml, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                    if ($allowPhocaTags) {
+                        if (isset($xml->phocagallerytags)) {
+                            self::importPhocaGalleryTags($db, $xml->phocagallerytags, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
+                        } elseif ($xml->getName() === 'phocagallerytags') {
+                            self::importPhocaGalleryTags($db, $xml, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
                         }
                     }
 
                     if ($allowTags) {
                         if (isset($xml->tags)) {
                             self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
+                            $summaries['tags'] = true;
                         } elseif ($xml->getName() === 'tags') {
                             self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
+                            $summaries['tags'] = true;
                         }
                     }
 
                     if ($allowArticles) {
                         if (isset($xml->articles)) {
                             self::importArticles($db, $xml->articles, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
+                            $summaries['articles'] = true;
                         } elseif ($xml->getName() === 'articles') {
                             self::importArticles($db, $xml, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
+                            $summaries['articles'] = true;
                         }
                     }
 
@@ -200,10 +214,18 @@ class Jdb2xmlImportHelper
 
             $msg = [];
             $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
-            $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
-            $msg[] = 'Phoca Gallery categories: new=' . $createdPhocaCats . ', changed=' . $changedPhocaCats . ', skipped=' . $skippedPhocaCats;
-            $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
-            $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
+            if ($summaries['categories']) {
+                $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            }
+            if ($summaries['phoca_tags']) {
+                $msg[] = 'Phoca Gallery tags: new=' . $createdPhocaTags . ', changed=' . $changedPhocaTags . ', skipped=' . $skippedPhocaTags;
+            }
+            if ($summaries['tags']) {
+                $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
+            }
+            if ($summaries['articles']) {
+                $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
+            }
             if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
             if (!$dryRun && $rollbackFile) $msg[] = 'Rollback log: ' . basename($rollbackFile);
             return implode(' ', $msg);
@@ -398,9 +420,9 @@ class Jdb2xmlImportHelper
         return (int) $table->id;
     }
 
-    private static function importPhocaGalleryCategories(
+    private static function importPhocaGalleryTags(
         $db,
-        $categories,
+        $tags,
         bool $dryRun,
         array $exclude,
         int &$created,
@@ -410,20 +432,20 @@ class Jdb2xmlImportHelper
         array &$rollback,
         ?array $allowed = null
     ): void {
-        $columns = self::getTableColumns($db, '#__phocagallery_categories');
+        $columns = self::getTableColumns($db, '#__phocagallery_tags');
         if (empty($columns)) {
-            $warnings[] = 'Phoca Gallery categories table missing.';
+            $warnings[] = 'Phoca Gallery tags table missing.';
             return;
         }
 
-        foreach ($categories->category as $node) {
+        foreach ($tags->tag as $node) {
             $id = (int) ($node->id ?? 0);
             $alias = trim((string) ($node->alias ?? ''));
             $key = $alias !== '' ? $alias : (string) $id;
 
             if ($key === '') {
                 $skipped++;
-                $warnings[] = 'Phoca Gallery category without alias or id skipped.';
+                $warnings[] = 'Phoca Gallery tag without alias or id skipped.';
                 continue;
             }
             if (isset($exclude[$key])) { $skipped++; continue; }
@@ -431,7 +453,7 @@ class Jdb2xmlImportHelper
 
             $query = $db->getQuery(true)
                 ->select('*')
-                ->from('#__phocagallery_categories');
+                ->from('#__phocagallery_tags');
             if ($alias !== '') {
                 $query->where('alias=' . $db->quote($alias));
             } else {
@@ -449,7 +471,6 @@ class Jdb2xmlImportHelper
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
-                'parent_id' => (string) ($node->parent_id ?? ''),
                 'ordering' => (string) ($node->ordering ?? ''),
             ];
 
@@ -482,8 +503,8 @@ class Jdb2xmlImportHelper
 
                 if ($changedLocal) {
                     if (!$dryRun) {
-                        $db->updateObject('#__phocagallery_categories', $existing, 'id');
-                        $rollback['updated']['phoca_categories'][] = $before;
+                        $db->updateObject('#__phocagallery_tags', $existing, 'id');
+                        $rollback['updated']['phoca_tags'][] = $before;
                     }
                     $changed++;
                 } else {
@@ -499,7 +520,6 @@ class Jdb2xmlImportHelper
             $defaults = [
                 'title' => $title,
                 'alias' => $aliasValue,
-                'parent_id' => (int) ($node->parent_id ?? 0),
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
                 'language' => (string) ($node->language ?? '*'),
@@ -516,17 +536,17 @@ class Jdb2xmlImportHelper
             }
 
             if ($data === []) {
-                $warnings[] = 'Phoca Gallery category skipped (no valid columns).';
+                $warnings[] = 'Phoca Gallery tag skipped (no valid columns).';
                 $skipped++;
                 continue;
             }
 
             $obj = (object) $data;
-            if (!$db->insertObject('#__phocagallery_categories', $obj)) {
-                throw new RuntimeException('Phoca Gallery category save failed');
+            if (!$db->insertObject('#__phocagallery_tags', $obj)) {
+                throw new RuntimeException('Phoca Gallery tag save failed');
             }
 
-            $rollback['created']['phoca_categories'][] = (int) ($obj->id ?? 0);
+            $rollback['created']['phoca_tags'][] = (int) ($obj->id ?? 0);
             $created++;
         }
     }

@@ -17,7 +17,7 @@ class Jdb2xmlViewExport extends HtmlView
         ');
         $db = Factory::getDbo();
         try {
-            $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+            $phocaColumns = $db->getTableColumns('#__phocagallery_tags', false);
         } catch (\Throwable $e) {
             $phocaColumns = [];
         }

@@ -27,8 +27,7 @@ class Jdb2xmlImportPreviewHelper
             $result[$fileKey] = [
                 'categories' => [],
                 'categoryTree' => [],
-                'phocaCategories' => [],
-                'phocaCategoryTree' => [],
+                'phocaTags' => [],
                 'tags' => [],
                 'articles' => [],
                 'articleTree' => [],
@@ -57,10 +56,10 @@ class Jdb2xmlImportPreviewHelper
                 self::previewCategories($db, $xml, $result[$fileKey]);
             }
 
-            if (isset($xml->phocagallerycategories)) {
-                self::previewPhocaGalleryCategories($db, $xml->phocagallerycategories, $result[$fileKey]);
-            } elseif ($xml->getName() === 'phocagallerycategories') {
-                self::previewPhocaGalleryCategories($db, $xml, $result[$fileKey]);
+            if (isset($xml->phocagallerytags)) {
+                self::previewPhocaGalleryTags($db, $xml->phocagallerytags, $result[$fileKey]);
+            } elseif ($xml->getName() === 'phocagallerytags') {
+                self::previewPhocaGalleryTags($db, $xml, $result[$fileKey]);
             }
 
             if (isset($xml->tags)) {
@@ -77,7 +76,6 @@ class Jdb2xmlImportPreviewHelper
 
             // Build a tree from category paths
             $result[$fileKey]['categoryTree'] = self::buildTree($result[$fileKey]['categories']);
-            $result[$fileKey]['phocaCategoryTree'] = self::buildParentTree($result[$fileKey]['phocaCategories']);
             $result[$fileKey]['articleTree'] = self::buildArticleTree($result[$fileKey]['articles']);
 
             if ($result[$fileKey]['warnings']) {
@@ -313,44 +311,42 @@ class Jdb2xmlImportPreviewHelper
         }
     }
 
-    private static function previewPhocaGalleryCategories($db, $categories, array &$out): void
+    private static function previewPhocaGalleryTags($db, $tags, array &$out): void
     {
         try {
-            $columns = $db->getTableColumns('#__phocagallery_categories', false);
+            $columns = $db->getTableColumns('#__phocagallery_tags', false);
         } catch (Throwable $e) {
             $columns = [];
         }
 
         if (empty($columns)) {
-            $out['warnings'][] = 'Phoca Gallery categories table not available.';
+            $out['warnings'][] = 'Phoca Gallery tags table not available.';
             $out['hasWarnings'] = true;
             return;
         }
 
-        foreach ($categories->category as $node) {
+        foreach ($tags->tag as $node) {
             $id = (int) ($node->id ?? 0);
             $alias = trim((string) ($node->alias ?? ''));
             $title = (string) ($node->title ?? $alias);
             $key = $alias !== '' ? $alias : (string) $id;
 
             if ($key === '') {
-                $out['warnings'][] = 'Phoca Gallery category without alias or id skipped';
-                $out['phocaCategories'][] = [
-                    'type' => 'phoca_category',
+                $out['warnings'][] = 'Phoca Gallery tag without alias or id skipped';
+                $out['phocaTags'][] = [
+                    'type' => 'phoca_tag',
                     'id' => '',
                     'title' => $title,
                     'action' => 'skipped',
                     'reason' => 'Missing alias or id',
-                    'exclude' => true,
-                    'node_id' => '',
-                    'parent_id' => ''
+                    'exclude' => true
                 ];
                 continue;
             }
 
             $query = $db->getQuery(true)
                 ->select('*')
-                ->from('#__phocagallery_categories');
+                ->from('#__phocagallery_tags');
             if ($alias !== '') {
                 $query->where('alias=' . $db->quote($alias));
             } else {
@@ -360,17 +356,15 @@ class Jdb2xmlImportPreviewHelper
             $existing = $db->setQuery($query)->loadObject();
 
             if (!$existing) {
-                $out['phocaCategories'][] = [
-                    'type' => 'phoca_category',
+                $out['phocaTags'][] = [
+                    'type' => 'phoca_tag',
                     'id' => $key,
                     'title' => $title,
                     'action' => 'new',
                     'reason' => '',
                     'exclude' => false,
                     'path' => $key,
-                    'displayPath' => $alias !== '' ? $alias : (string) $id,
-                    'node_id' => (string) $id,
-                    'parent_id' => (string) ($node->parent_id ?? '')
+                    'displayPath' => $alias !== '' ? $alias : (string) $id
                 ];
                 continue;
             }
@@ -384,7 +378,6 @@ class Jdb2xmlImportPreviewHelper
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
-                'parent_id' => (string) ($node->parent_id ?? ''),
                 'ordering' => (string) ($node->ordering ?? ''),
             ];
 
@@ -401,30 +394,26 @@ class Jdb2xmlImportPreviewHelper
             }
 
             if ($hasChanges) {
-                $out['phocaCategories'][] = [
-                    'type' => 'phoca_category',
+                $out['phocaTags'][] = [
+                    'type' => 'phoca_tag',
                     'id' => $key,
                     'title' => $title,
                     'action' => 'changed',
                     'reason' => '',
                     'exclude' => false,
                     'path' => $key,
-                    'displayPath' => $alias !== '' ? $alias : (string) $id,
-                    'node_id' => (string) $id,
-                    'parent_id' => (string) ($node->parent_id ?? '')
+                    'displayPath' => $alias !== '' ? $alias : (string) $id
                 ];
             } else {
-                $out['phocaCategories'][] = [
-                    'type' => 'phoca_category',
+                $out['phocaTags'][] = [
+                    'type' => 'phoca_tag',
                     'id' => $key,
                     'title' => $title,
                     'action' => 'skipped',
                     'reason' => 'No changes detected',
                     'exclude' => true,
                     'path' => $key,
-                    'displayPath' => $alias !== '' ? $alias : (string) $id,
-                    'node_id' => (string) $id,
-                    'parent_id' => (string) ($node->parent_id ?? '')
+                    'displayPath' => $alias !== '' ? $alias : (string) $id
                 ];
             }
         }
