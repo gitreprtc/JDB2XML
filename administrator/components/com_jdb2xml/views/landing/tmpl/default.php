@@ -19,9 +19,17 @@ use Joomla\CMS\Uri\Uri;
 
   <div class="jdb2xml-landing-downloads">
     <h3>CSV templates</h3>
-    <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_articles_template.csv" download>
-      Download artikel CSV-template
-    </a>
+    <div class="jdb2xml-landing-downloads-list">
+      <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_tags_template.csv" download>
+        Download tags CSV-template
+      </a>
+      <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_categories_template.csv" download>
+        Download categorieën CSV-template
+      </a>
+      <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_articles_template.csv" download>
+        Download artikel CSV-template
+      </a>
+    </div>
   </div>
 
   <h3 class="jdb2xml-hidden">Set-Up</h3>
@@ -46,5 +54,6 @@ use Joomla\CMS\Uri\Uri;
 .jdb2xml-landing { padding: 16px 0; }
 .jdb2xml-landing-links { display:flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
 .jdb2xml-landing-downloads { margin-top: 20px; }
+.jdb2xml-landing-downloads-list { display: flex; gap: 12px; flex-wrap: wrap; }
 .jdb2xml-hidden { display: none; }
 </style>

@@ -18,6 +18,7 @@
       <folder>models</folder>
       <folder>views</folder>
       <folder>helpers</folder>
+      <folder>assets</folder>
     </files>
   </administration>
 </extension>

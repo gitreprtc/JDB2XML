@@ -27,7 +27,7 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false) {
+        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['title', 'tag', 'tags', 'metadata', 'metakey', 'meta'])) {
             self::consumeRow($firstRow, $tags, $order);
         }
 
@@ -103,7 +103,7 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false) {
+        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['categorie', 'categories', 'category', 'level', 'niveau', 'path', 'title', 'alias'])) {
             self::consumeCategoryRow($firstRow, $categories, $order);
         }
 
@@ -393,6 +393,29 @@ class Jdb2xmlTagConversionHelper
             return !in_array($lower, ['land', 'provincie', 'naam', 'plaats'], true);
         }));
         return $values;
+    }
+
+    private static function isHeaderRow(array $row, array $needles): bool
+    {
+        $normalized = array_map(static function ($value) {
+            return mb_strtolower(trim((string) $value));
+        }, $row);
+
+        foreach ($normalized as $value) {
+            if ($value === '') {
+                continue;
+            }
+            if (in_array($value, $needles, true)) {
+                return true;
+            }
+            foreach ($needles as $needle) {
+                if ($needle !== '' && (str_starts_with($value, $needle . '_') || str_starts_with($value, $needle . '-'))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function slugify(string $value): string
