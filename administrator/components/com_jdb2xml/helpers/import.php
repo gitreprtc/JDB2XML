@@ -538,6 +538,9 @@ class Jdb2xmlImportHelper
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
             ];
+            if (isset($columns['date'])) {
+                $defaults['date'] = (string) ($node->date ?? date('Y-m-d H:i:s'));
+            }
 
             foreach ($defaults as $field => $value) {
                 if (isset($columns[$field])) {

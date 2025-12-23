@@ -75,8 +75,8 @@ use Joomla\CMS\Uri\Uri;
 .jdb2xml-landing-downloads { margin-top: 20px; }
 .jdb2xml-landing-downloads-list { display: flex; gap: 12px; flex-wrap: wrap; }
 .jdb2xml-landing-paths { margin-top: 12px; }
-.jdb2xml-brand { position: absolute; top: 0; right: 0; }
-.jdb2xml-brand img { max-width: 220px; height: auto; }
+.jdb2xml-brand { position: absolute; top: 0; right: 0; z-index: 2; }
+.jdb2xml-brand img { max-width: 220px; height: auto; display: block; }
 .jdb2xml-landing-content { max-width: 720px; }
 .jdb2xml-copyright { margin-top: 20px; font-size: 12px; color: #666; }
 .jdb2xml-hidden { display: none; }
