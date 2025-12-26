@@ -39,7 +39,7 @@ class Jdb2xmlRollbackHelper
 
     public static function apply(string $type, string $targetFile, array $createdIds, array $updatedIds): array
     {
-        $type = in_array($type, ['categories', 'tags', 'articles'], true) ? $type : 'categories';
+        $type = in_array($type, ['categories', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
         if ($targetFile === '') {
             return ['message' => 'No rollback log selected.', 'warning' => null];
         }
@@ -72,6 +72,8 @@ class Jdb2xmlRollbackHelper
 
         if ($type === 'tags') {
             $table = '#__tags';
+        } elseif ($type === 'phoca_tags') {
+            $table = '#__phocagallery_categories';
         } elseif ($type === 'articles') {
             $table = '#__content';
         } else {
@@ -119,15 +121,16 @@ class Jdb2xmlRollbackHelper
             self::cleanupLogIfEmpty($entry['file'], $type);
         }
 
+        $label = $type === 'phoca_tags' ? 'phoca gallery tags' : $type;
         return [
-            'message' => 'Rollback completed for ' . $type . ': deleted=' . $deleted . ', reverted=' . $reverted . '.',
+            'message' => 'Rollback completed for ' . $label . ': deleted=' . $deleted . ', reverted=' . $reverted . '.',
             'warning' => $warning,
         ];
     }
 
     public static function fetchEntities(string $type, array $ids): array
     {
-        $type = in_array($type, ['categories', 'tags', 'articles'], true) ? $type : 'categories';
+        $type = in_array($type, ['categories', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
         $ids = array_values(array_unique(array_map('intval', $ids)));
         if (empty($ids)) {
             return [];
@@ -138,6 +141,11 @@ class Jdb2xmlRollbackHelper
             $query = $db->getQuery(true)
                 ->select($db->quoteName(['id', 'title', 'alias']))
                 ->from($db->quoteName('#__tags'))
+                ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
+        } elseif ($type === 'phoca_tags') {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'title', 'alias']))
+                ->from($db->quoteName('#__phocagallery_categories'))
                 ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
         } elseif ($type === 'articles') {
             $query = $db->getQuery(true)
@@ -158,7 +166,7 @@ class Jdb2xmlRollbackHelper
         foreach ($rows as $row) {
             $map[(int)$row['id']] = [
                 'title' => $row['title'] ?? '',
-                'path' => $type === 'tags' || $type === 'articles' ? ($row['alias'] ?? '') : ($row['path'] ?? ''),
+                'path' => $type === 'tags' || $type === 'articles' || $type === 'phoca_tags' ? ($row['alias'] ?? '') : ($row['path'] ?? ''),
             ];
         }
 

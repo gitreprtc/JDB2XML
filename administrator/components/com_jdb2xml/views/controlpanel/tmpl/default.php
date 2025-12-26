@@ -53,8 +53,13 @@ function collectActions(array $preview, bool $phocaAvailable): array
         if (!empty($data['categoryTree']) && is_array($data['categoryTree'])) {
             collectActionsFromTree($data['categoryTree'], $actions);
         }
-        if ($phocaAvailable && !empty($data['phocaCategoryTree']) && is_array($data['phocaCategoryTree'])) {
-            collectActionsFromTree($data['phocaCategoryTree'], $actions);
+        if ($phocaAvailable && !empty($data['phocaTags']) && is_array($data['phocaTags'])) {
+            foreach ($data['phocaTags'] as $tag) {
+                $action = (string)($tag['action'] ?? '');
+                if ($action !== '') {
+                    $actions[$action] = true;
+                }
+            }
         }
         if (!empty($data['tags']) && is_array($data['tags'])) {
             foreach ($data['tags'] as $tag) {
@@ -198,11 +203,11 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
           <div class="jdb2xml-grid">
             <?php
               $tree = $data['categoryTree'] ?? [];
-              $phocaTree = $data['phocaCategoryTree'] ?? [];
+              $phocaTags = $data['phocaTags'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
               $articleTree = $data['articleTree'] ?? [];
               $hasArticles = !empty($articleTree) && is_array($articleTree);
-              $hasPhoca = $phocaAvailable && !empty($phocaTree) && is_array($phocaTree);
+              $hasPhocaTags = $phocaAvailable && !empty($phocaTags) && is_array($phocaTags);
               $warningText = '';
               if (!empty($data['warnings']) && is_array($data['warnings'])) {
                   $warningText = htmlspecialchars('Warnings: ' . implode(' | ', array_map('strval', $data['warnings'])) . '!', ENT_QUOTES, 'UTF-8');
@@ -305,22 +310,64 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
               </div>
             <?php endif; ?>
           </div>
-          <?php if ($hasPhoca): ?>
+          <?php if ($hasPhocaTags): ?>
             <div class="jdb2xml-phoca">
-              <h4>Phoca Gallery Categories</h4>
-              <?php
-                echo '<table class="jdb2xml-table">';
-                echo '<thead><tr>';
-                echo '<th class="jdb2xml-head-check">Action</th>';
-                echo '<th class="jdb2xml-head-title">Title</th>';
-                echo '<th>Alias/ID</th>';
-                echo '<th></th>';
-                echo '<th></th>';
-                echo '</tr></thead>';
-                echo '<tbody>';
-                renderTreeWithExclude($phocaTree, $fileKey);
-                echo '</tbody></table>';
-              ?>
+              <h4>Phoca Gallery Tags</h4>
+              <table class="jdb2xml-table">
+                <thead><tr>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Alias/ID</th>
+                  <th></th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  <?php foreach ($phocaTags as $tag): ?>
+                    <?php
+                      $phocaAction = (string)($tag['action'] ?? '');
+                      $phocaTitle = (string)($tag['title'] ?? '-');
+                      $phocaAlias = (string)($tag['id'] ?? '');
+                      $phocaExclude = !empty($tag['exclude']);
+                      $phocaReason = (string)($tag['reason'] ?? '');
+                      $phocaSearch = strtolower(trim($phocaTitle . ' ' . $phocaAlias));
+                    ?>
+                    <tr class="jdb2xml-row"
+                        data-action="<?php echo htmlspecialchars($phocaAction, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-search="<?php echo htmlspecialchars($phocaSearch, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-reason="<?php echo htmlspecialchars($phocaReason, ENT_QUOTES, 'UTF-8'); ?>">
+                      <td class="jdb2xml-cell jdb2xml-check">
+                        <?php if ($phocaAlias !== ''): ?>
+                          <label class="jdb2xml-exclude">
+                            <input class="jdb2xml-exclude-cb" type="checkbox"
+                                   name="exclude[<?php echo htmlspecialchars($fileKey, ENT_QUOTES, 'UTF-8'); ?>][<?php echo htmlspecialchars($phocaAlias, ENT_QUOTES, 'UTF-8'); ?>]"
+                                   value="1"<?php echo $phocaExclude ? ' checked' : ''; ?>>
+                            <span>Exclude</span>
+                          </label>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-title">
+                        <?php echo htmlspecialchars($phocaTitle, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php if ($phocaAction === 'new'): ?>
+                          <span class="jdb2xml-new-icon">new</span>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-path">
+                        <?php if ($phocaAlias !== ''): ?>
+                          <code><?php echo htmlspecialchars($phocaAlias, ENT_QUOTES, 'UTF-8'); ?></code>
+                        <?php endif; ?>
+                      </td>
+                      <td class="jdb2xml-cell jdb2xml-actions"></td>
+                      <td class="jdb2xml-cell jdb2xml-badge-cell">
+                        <?php if ($phocaAction !== ''): ?>
+                          <span class="jdb2xml-badge" title="<?php echo htmlspecialchars($phocaReason, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($phocaAction, ENT_QUOTES, 'UTF-8'); ?>
+                          </span>
+                        <?php endif; ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
             </div>
           <?php endif; ?>
           <?php if ($hasArticles): ?>

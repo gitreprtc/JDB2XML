@@ -82,6 +82,110 @@ class Jdb2xmlTagConversionHelper
         ];
     }
 
+    public static function convertCsvToPhocaGalleryTagsXml(string $csvPath): array
+    {
+        if (!is_file($csvPath)) {
+            throw new RuntimeException('CSV file not found.');
+        }
+
+        $handle = fopen($csvPath, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to read CSV file.');
+        }
+
+        $delimiter = ',';
+        $firstRow = fgetcsv($handle, 0, $delimiter);
+        if ($firstRow !== false && count($firstRow) === 1 && strpos((string) $firstRow[0], ';') !== false) {
+            $delimiter = ';';
+            $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
+        }
+
+        if ($firstRow === false) {
+            fclose($handle);
+            return ['xml' => '', 'count' => 0];
+        }
+
+        $headers = array_map('trim', $firstRow);
+        if (!empty($headers)) {
+            $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $headers[0]);
+        }
+        $headers = array_map('mb_strtolower', $headers);
+
+        $hasHeader = self::isHeaderRow($headers, ['title', 'alias', 'description', 'published', 'access', 'language']);
+        if (!$hasHeader) {
+            $rows = [$firstRow];
+            $headers = ['title', 'alias', 'description'];
+        } else {
+            $rows = [];
+        }
+
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (count($row) === 1 && $delimiter === ';' && strpos((string) $row[0], ';') !== false) {
+                $row = str_getcsv((string) $row[0], $delimiter);
+            }
+            $rows[] = $row;
+        }
+        fclose($handle);
+
+        $headerMap = [];
+        foreach ($headers as $index => $header) {
+            $key = trim((string) $header);
+            if ($key !== '') {
+                $headerMap[$key] = $index;
+            }
+        }
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+        $root = $dom->createElement('phocagallerytags');
+        $dom->appendChild($root);
+
+        $id = 1;
+        foreach ($rows as $row) {
+            $title = trim((string) ($row[$headerMap['title'] ?? 0] ?? ''));
+            $alias = trim((string) ($row[$headerMap['alias'] ?? 1] ?? ''));
+            $description = trim((string) ($row[$headerMap['description'] ?? 2] ?? ''));
+            $published = isset($headerMap['published']) ? trim((string) ($row[$headerMap['published']] ?? '')) : '';
+            $access = isset($headerMap['access']) ? trim((string) ($row[$headerMap['access']] ?? '')) : '';
+            $language = isset($headerMap['language']) ? trim((string) ($row[$headerMap['language']] ?? '')) : '';
+
+            if ($title === '' && $alias === '') {
+                continue;
+            }
+
+            if ($alias === '') {
+                $alias = self::slugify($title);
+            }
+
+            $tagNode = $dom->createElement('tag');
+            $tagNode->appendChild($dom->createElement('id', (string) $id));
+            $tagNode->appendChild($dom->createElement('title', $title !== '' ? $title : $alias));
+            $tagNode->appendChild($dom->createElement('alias', $alias));
+
+            $descriptionNode = $dom->createElement('description');
+            $descriptionNode->appendChild($dom->createCDATASection($description));
+            $tagNode->appendChild($descriptionNode);
+
+            if ($published !== '') {
+                $tagNode->appendChild($dom->createElement('published', $published));
+            }
+            if ($access !== '') {
+                $tagNode->appendChild($dom->createElement('access', $access));
+            }
+            if ($language !== '') {
+                $tagNode->appendChild($dom->createElement('language', $language));
+            }
+
+            $root->appendChild($tagNode);
+            $id++;
+        }
+
+        return [
+            'xml' => $dom->saveXML(),
+            'count' => $id - 1,
+        ];
+    }
+
     public static function convertCsvToCategoriesXml(string $csvPath): array
     {
         if (!is_file($csvPath)) {

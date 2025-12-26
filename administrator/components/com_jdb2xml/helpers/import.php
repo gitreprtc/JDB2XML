@@ -5,6 +5,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Filesystem\Folder;
 use Joomla\CMS\Table\Table;
 
 require_once __DIR__ . '/ImportPlan.php';
@@ -26,8 +27,8 @@ class Jdb2xmlImportHelper
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
-            'updated' => ['categories' => [], 'phoca_categories' => [], 'tags' => [], 'articles' => []],
+            'created' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -42,10 +43,16 @@ class Jdb2xmlImportHelper
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
         $createdCats = $changedCats = $skippedCats = 0;
-        $createdPhocaCats = $changedPhocaCats = $skippedPhocaCats = 0;
+        $createdPhocaTags = $changedPhocaTags = $skippedPhocaTags = 0;
         $createdTags = $changedTags = $skippedTags = 0;
         $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
+        $summaries = [
+            'categories' => false,
+            'phoca_tags' => false,
+            'tags' => false,
+            'articles' => false,
+        ];
 
         // If a preview plan is available, execute exactly that plan (no re-analysis)
         $app = Factory::getApplication();
@@ -81,11 +88,11 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
-        $allowedPhocaCategorySet = null;
+        $allowedPhocaTagSet = null;
         $allowedArticleSet = null;
         $allowTags = true;
         $allowArticles = true;
-        $allowPhocaCategories = true;
+        $allowPhocaTags = true;
         if ($selectedFile && is_array($preview)) {
             $previewData = $preview[$selectedFile] ?? null;
             if (is_array($previewData)) {
@@ -110,16 +117,16 @@ class Jdb2xmlImportHelper
                     $allowedArticleSet[$key] = true;
                 }
 
-                $allowPhocaCategories = !empty($previewData['phocaCategories']) && is_array($previewData['phocaCategories']);
-                if ($allowPhocaCategories) {
-                    $allowedPhocaCategorySet = [];
-                    $rows = $previewData['phocaCategories'] ?? [];
+                $allowPhocaTags = !empty($previewData['phocaTags']) && is_array($previewData['phocaTags']);
+                if ($allowPhocaTags) {
+                    $allowedPhocaTagSet = [];
+                    $rows = $previewData['phocaTags'] ?? [];
                     foreach ($rows as $row) {
                         $key = (string)($row['path'] ?? $row['id'] ?? '');
                         if ($key === '' || isset($excludeSet[$key])) {
                             continue;
                         }
-                        $allowedPhocaCategorySet[$key] = true;
+                        $allowedPhocaTagSet[$key] = true;
                     }
                 }
             }
@@ -153,31 +160,42 @@ class Jdb2xmlImportHelper
 
                     if (isset($xml->categories)) {
                         self::importCategories($db, $xml->categories, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        $summaries['categories'] = true;
                     } elseif ($xml->getName() === 'categories') {
                         self::importCategories($db, $xml, $dryRun, $excludeSet, $createdCats, $changedCats, $skippedCats, $warnings, $rollback, $allowedCategorySet);
+                        $summaries['categories'] = true;
                     }
 
-                    if ($allowPhocaCategories) {
-                        if (isset($xml->phocagallerycategories)) {
-                            self::importPhocaGalleryCategories($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
-                        } elseif ($xml->getName() === 'phocagallerycategories') {
-                            self::importPhocaGalleryCategories($db, $xml, $dryRun, $excludeSet, $createdPhocaCats, $changedPhocaCats, $skippedPhocaCats, $warnings, $rollback, $allowedPhocaCategorySet);
+                    if ($allowPhocaTags) {
+                        if (isset($xml->phocagallerytags)) {
+                            self::importPhocaGalleryTags($db, $xml->phocagallerytags, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
+                        } elseif (isset($xml->phocagallerycategories)) {
+                            self::importPhocaGalleryTags($db, $xml->phocagallerycategories, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
+                        } elseif (in_array($xml->getName(), ['phocagallerytags', 'phocagallerycategories'], true)) {
+                            self::importPhocaGalleryTags($db, $xml, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
+                            $summaries['phoca_tags'] = true;
                         }
                     }
 
                     if ($allowTags) {
                         if (isset($xml->tags)) {
                             self::importTags($db, $xml->tags, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
+                            $summaries['tags'] = true;
                         } elseif ($xml->getName() === 'tags') {
                             self::importTags($db, $xml, $dryRun, $excludeSet, $createdTags, $changedTags, $skippedTags, $warnings, $rollback);
+                            $summaries['tags'] = true;
                         }
                     }
 
                     if ($allowArticles) {
                         if (isset($xml->articles)) {
                             self::importArticles($db, $xml->articles, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
+                            $summaries['articles'] = true;
                         } elseif ($xml->getName() === 'articles') {
                             self::importArticles($db, $xml, $dryRun, $excludeSet, $createdArticles, $changedArticles, $skippedArticles, $warnings, $rollback, $allowedArticleSet);
+                            $summaries['articles'] = true;
                         }
                     }
 
@@ -200,10 +218,18 @@ class Jdb2xmlImportHelper
 
             $msg = [];
             $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
-            $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
-            $msg[] = 'Phoca Gallery categories: new=' . $createdPhocaCats . ', changed=' . $changedPhocaCats . ', skipped=' . $skippedPhocaCats;
-            $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
-            $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
+            if ($summaries['categories']) {
+                $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            }
+            if ($summaries['phoca_tags']) {
+                $msg[] = 'Phoca Gallery tags: new=' . $createdPhocaTags . ', changed=' . $changedPhocaTags . ', skipped=' . $skippedPhocaTags;
+            }
+            if ($summaries['tags']) {
+                $msg[] = 'Tags: new=' . $createdTags . ', changed=' . $changedTags . ', skipped=' . $skippedTags;
+            }
+            if ($summaries['articles']) {
+                $msg[] = 'Articles: new=' . $createdArticles . ', changed=' . $changedArticles . ', skipped=' . $skippedArticles;
+            }
             if ($warnings) $msg[] = 'Warnings: ' . implode(' | ', array_unique($warnings));
             if (!$dryRun && $rollbackFile) $msg[] = 'Rollback log: ' . basename($rollbackFile);
             return implode(' ', $msg);
@@ -398,9 +424,9 @@ class Jdb2xmlImportHelper
         return (int) $table->id;
     }
 
-    private static function importPhocaGalleryCategories(
+    private static function importPhocaGalleryTags(
         $db,
-        $categories,
+        $tags,
         bool $dryRun,
         array $exclude,
         int &$created,
@@ -412,46 +438,60 @@ class Jdb2xmlImportHelper
     ): void {
         $columns = self::getTableColumns($db, '#__phocagallery_categories');
         if (empty($columns)) {
-            $warnings[] = 'Phoca Gallery categories table missing.';
+            $warnings[] = 'Phoca Gallery tags table missing.';
             return;
         }
 
-        foreach ($categories->category as $node) {
+        $entries = [];
+        if (isset($tags->tag)) {
+            $entries = $tags->tag;
+        } elseif (isset($tags->category)) {
+            $entries = $tags->category;
+        }
+
+        $existingIndex = self::getPhocaCategoryIndex($db);
+        $createdIndex = [];
+
+        foreach ($entries as $node) {
             $id = (int) ($node->id ?? 0);
             $alias = trim((string) ($node->alias ?? ''));
             $key = $alias !== '' ? $alias : (string) $id;
 
             if ($key === '') {
                 $skipped++;
-                $warnings[] = 'Phoca Gallery category without alias or id skipped.';
+                $warnings[] = 'Phoca Gallery tag without alias or id skipped.';
                 continue;
             }
             if (isset($exclude[$key])) { $skipped++; continue; }
             if ($allowed !== null && !isset($allowed[$key])) { $skipped++; continue; }
 
-            $query = $db->getQuery(true)
-                ->select('*')
-                ->from('#__phocagallery_categories');
-            if ($alias !== '') {
-                $query->where('alias=' . $db->quote($alias));
-            } else {
-                $query->where('id=' . (int) $id);
-            }
-            $existing = $db->setQuery($query)->loadObject();
+            $existing = $existingIndex['alias'][$alias] ?? $existingIndex['id'][$id] ?? null;
 
             $title = (string) ($node->title ?? $alias);
+            $resolvedParent = self::resolvePhocaParent($node, $existingIndex, $createdIndex);
+            $parentId = $resolvedParent['id'];
+            $parentEntry = $resolvedParent['entry'];
+
             $map = [
                 'title' => $title,
                 'alias' => $alias,
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
+                'approved' => (string) ($node->approved ?? '1'),
                 'published' => (string) ($node->published ?? ''),
                 'access' => (string) ($node->access ?? ''),
+                'accessuserid' => '0',
+                'uploaduserid' => '0',
+                'deleteuserid' => '0',
                 'language' => (string) ($node->language ?? ''),
-                'parent_id' => (string) ($node->parent_id ?? ''),
                 'ordering' => (string) ($node->ordering ?? ''),
+                'parent_id' => $parentId,
             ];
+
+            if (isset($columns['userfolder'])) {
+                $map['userfolder'] = self::buildPhocaUserfolder($node, $title, $alias, $parentEntry);
+            }
 
             if ($existing) {
                 $changedLocal = false;
@@ -466,13 +506,48 @@ class Jdb2xmlImportHelper
                 }
 
                 foreach ($map as $field => $value) {
-                    if ($value === '' || !isset($columns[$field])) {
+                    if (!isset($columns[$field])) {
                         continue;
                     }
                     if (!property_exists($existing, $field)) {
                         continue;
                     }
                     $dbVal = (string) ($existing->$field ?? '');
+                    if ($field === 'parent_id') {
+                        if ($value !== '' && (int)$dbVal !== (int)$value) {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = (int) $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
+                    if ($field === 'userfolder') {
+                        if ($dbVal === '' && $value !== '') {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
+                    if ($field === 'approved') {
+                        if ($value !== '' && (int) $dbVal !== (int) $value) {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = (int) $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
+                    if (in_array($field, ['accessuserid', 'uploaduserid', 'deleteuserid'], true)) {
+                        if ((string) $dbVal !== (string) $value) {
+                            $before['fields'][$field] = $dbVal;
+                            $existing->$field = (int) $value;
+                            $changedLocal = true;
+                        }
+                        continue;
+                    }
+                    if ($value === '') {
+                        continue;
+                    }
                     if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
                         $before['fields'][$field] = $dbVal;
                         $existing->$field = $value;
@@ -483,7 +558,11 @@ class Jdb2xmlImportHelper
                 if ($changedLocal) {
                     if (!$dryRun) {
                         $db->updateObject('#__phocagallery_categories', $existing, 'id');
-                        $rollback['updated']['phoca_categories'][] = $before;
+                        $rollback['updated']['phoca_tags'][] = $before;
+
+                        if (isset($columns['userfolder']) && !empty($existing->userfolder)) {
+                            self::ensurePhocaUserFolder($existing->userfolder);
+                        }
                     }
                     $changed++;
                 } else {
@@ -499,15 +578,25 @@ class Jdb2xmlImportHelper
             $defaults = [
                 'title' => $title,
                 'alias' => $aliasValue,
-                'parent_id' => (int) ($node->parent_id ?? 0),
+                'approved' => isset($node->approved) ? (int) $node->approved : 1,
                 'published' => (int) ($node->published ?? 1),
                 'access' => (int) ($node->access ?? 1),
+                'accessuserid' => 0,
+                'uploaduserid' => 0,
+                'deleteuserid' => 0,
                 'language' => (string) ($node->language ?? '*'),
                 'ordering' => (int) ($node->ordering ?? 0),
                 'description' => (string) ($node->description ?? ''),
                 'params' => (string) ($node->params ?? ''),
                 'metadata' => (string) ($node->metadata ?? ''),
+                'parent_id' => $parentId,
             ];
+            if (isset($columns['date'])) {
+                $defaults['date'] = (string) ($node->date ?? date('Y-m-d H:i:s'));
+            }
+            if (isset($columns['userfolder'])) {
+                $defaults['userfolder'] = self::buildPhocaUserfolder($node, $title, $aliasValue, $parentEntry);
+            }
 
             foreach ($defaults as $field => $value) {
                 if (isset($columns[$field])) {
@@ -516,18 +605,101 @@ class Jdb2xmlImportHelper
             }
 
             if ($data === []) {
-                $warnings[] = 'Phoca Gallery category skipped (no valid columns).';
+                $warnings[] = 'Phoca Gallery tag skipped (no valid columns).';
                 $skipped++;
                 continue;
             }
 
             $obj = (object) $data;
             if (!$db->insertObject('#__phocagallery_categories', $obj)) {
-                throw new RuntimeException('Phoca Gallery category save failed');
+                throw new RuntimeException('Phoca Gallery tag save failed');
             }
 
-            $rollback['created']['phoca_categories'][] = (int) ($obj->id ?? 0);
+            if (isset($columns['userfolder']) && !empty($obj->userfolder)) {
+                self::ensurePhocaUserFolder($obj->userfolder);
+            }
+
+            $rollback['created']['phoca_tags'][] = (int) ($obj->id ?? 0);
             $created++;
+
+            $newId = (int) ($obj->id ?? 0);
+            if ($aliasValue !== '') {
+                $createdIndex[$aliasValue] = (object) ['id' => $newId, 'alias' => $aliasValue, 'parent_id' => $parentId, 'userfolder' => ($data['userfolder'] ?? '')];
+            }
+            if ($newId > 0) {
+                $createdIndex[$newId] = (object) ['id' => $newId, 'alias' => $aliasValue, 'parent_id' => $parentId, 'userfolder' => ($data['userfolder'] ?? '')];
+            }
+        }
+    }
+
+    private static function getPhocaCategoryIndex($db): array
+    {
+        $index = ['alias' => [], 'id' => []];
+        try {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'alias', 'parent_id', 'userfolder']))
+                ->from('#__phocagallery_categories');
+            $rows = (array) $db->setQuery($query)->loadObjectList();
+            foreach ($rows as $row) {
+                $index['id'][(int) $row->id] = $row;
+                if (!empty($row->alias)) {
+                    $index['alias'][(string) $row->alias] = $row;
+                }
+            }
+        } catch (Throwable $e) {
+        }
+
+        return $index;
+    }
+
+    private static function resolvePhocaParent($node, array $existingIndex, array $createdIndex): array
+    {
+        $parentAlias = trim((string) ($node->parent_alias ?? ''));
+        $parentId = (int) ($node->parent_id ?? 0);
+
+        if ($parentAlias !== '') {
+            if (isset($createdIndex[$parentAlias])) {
+                $parent = $createdIndex[$parentAlias];
+                return ['id' => (int) ($parent->id ?? 0), 'entry' => $parent];
+            }
+            if (isset($existingIndex['alias'][$parentAlias])) {
+                $parent = $existingIndex['alias'][$parentAlias];
+                return ['id' => (int) ($parent->id ?? 0), 'entry' => $parent];
+            }
+        }
+
+        if ($parentId > 0) {
+            $parent = $createdIndex[$parentId] ?? ($existingIndex['id'][$parentId] ?? null);
+            return ['id' => $parent ? (int) $parent->id : $parentId, 'entry' => $parent];
+        }
+
+        return ['id' => 0, 'entry' => null];
+    }
+
+    private static function buildPhocaUserfolder($node, string $title, string $alias, ?object $parent = null): string
+    {
+        $candidate = trim((string) ($node->userfolder ?? ''));
+        if ($candidate === '') {
+            $candidate = $alias !== '' ? $alias : OutputFilter::stringURLSafe($title);
+        }
+        $candidate = trim($candidate, '/');
+
+        if ($parent && !empty($parent->userfolder)) {
+            $parentPath = trim((string) $parent->userfolder, '/');
+            if ($parentPath !== '') {
+                $candidate = $parentPath . '/' . $candidate;
+            }
+        }
+
+        return $candidate;
+    }
+
+    private static function ensurePhocaUserFolder(string $userfolder): void
+    {
+        $base = JPATH_ROOT . '/images/phocagallery';
+        $target = $base . '/' . trim($userfolder, '/');
+        if (!is_dir($target)) {
+            Folder::create($target);
         }
     }
 

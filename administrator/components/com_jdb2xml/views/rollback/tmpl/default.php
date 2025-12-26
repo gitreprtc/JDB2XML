@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../../helpers/rollback.php';
 
 $rollbackCategories = Jdb2xmlRollbackHelper::listLogsByType('categories');
 $rollbackTags = Jdb2xmlRollbackHelper::listLogsByType('tags');
+$rollbackPhocaTags = Jdb2xmlRollbackHelper::listLogsByType('phoca_tags');
 $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
 ?>
 
@@ -178,6 +179,129 @@ $rollbackArticles = Jdb2xmlRollbackHelper::listLogsByType('articles');
                   <th class="jdb2xml-head-check">Action</th>
                   <th class="jdb2xml-head-title">Title</th>
                   <th>Path</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($log['created'] as $item): ?>
+                  <?php
+                    $entity = $entities[(int)$item['id']] ?? ['title' => '', 'path' => ''];
+                  ?>
+                  <tr class="jdb2xml-row">
+                    <td class="jdb2xml-cell jdb2xml-check">
+                      <label class="jdb2xml-exclude">
+                        <input type="checkbox"
+                               name="rollback_items[created][]"
+                               value="<?php echo (int)$item['id']; ?>"
+                               <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
+                        <span>Created</span>
+                      </label>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-title">
+                      <?php echo htmlspecialchars((string)$entity['title'], ENT_QUOTES, 'UTF-8'); ?>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-path">
+                      <?php if (!empty($entity['path'])): ?>
+                        <code><?php echo htmlspecialchars((string)$entity['path'], ENT_QUOTES, 'UTF-8'); ?></code>
+                      <?php endif; ?>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-actions"></td>
+                    <td class="jdb2xml-cell jdb2xml-badge-cell">
+                      <?php if ($item['rolled_back']): ?>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+                <?php foreach ($log['updated'] as $item): ?>
+                  <?php
+                    $entity = $entities[(int)$item['id']] ?? ['title' => '', 'path' => ''];
+                    $fieldsText = '';
+                    if (!empty($item['fields'])) {
+                        $fieldsText = implode(', ', array_map(static function ($key, $value) {
+                            return $key . '=' . (is_scalar($value) ? (string)$value : json_encode($value));
+                        }, array_keys($item['fields']), $item['fields']));
+                    }
+                  ?>
+                  <tr class="jdb2xml-row">
+                    <td class="jdb2xml-cell jdb2xml-check">
+                      <label class="jdb2xml-exclude">
+                        <input type="checkbox"
+                               name="rollback_items[updated][]"
+                               value="<?php echo (int)$item['id']; ?>"
+                               <?php echo $item['rolled_back'] ? 'disabled' : ''; ?>>
+                        <span>Updated</span>
+                      </label>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-title">
+                      <?php echo htmlspecialchars((string)$entity['title'], ENT_QUOTES, 'UTF-8'); ?>
+                      <?php if ($fieldsText !== ''): ?>
+                        <div class="jdb2xml-rollback-fields"><?php echo htmlspecialchars($fieldsText, ENT_QUOTES, 'UTF-8'); ?></div>
+                      <?php endif; ?>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-path">
+                      <?php if (!empty($entity['path'])): ?>
+                        <code><?php echo htmlspecialchars((string)$entity['path'], ENT_QUOTES, 'UTF-8'); ?></code>
+                      <?php endif; ?>
+                    </td>
+                    <td class="jdb2xml-cell jdb2xml-actions"></td>
+                    <td class="jdb2xml-cell jdb2xml-badge-cell">
+                      <?php if ($item['rolled_back']): ?>
+                        <span class="jdb2xml-badge jdb2xml-rollback-status">Rollback completed</span>
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+            <button type="submit" class="btn btn-warning" <?php echo $hasSelectable ? '' : 'disabled'; ?>>
+              Rollback selected changes
+            </button>
+          </form>
+        </details>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </div>
+
+  <div class="jdb2xml-section">
+    <h3>Phoca Gallery Tags</h3>
+    <?php if (empty($rollbackPhocaTags)): ?>
+      <div class="jdb2xml-empty">No restore points for Phoca Gallery Tags.</div>
+    <?php else: ?>
+      <?php foreach ($rollbackPhocaTags as $log): ?>
+        <?php
+          $hasSelectable = false;
+          foreach ($log['created'] as $item) {
+              if (!$item['rolled_back']) { $hasSelectable = true; break; }
+          }
+          if (!$hasSelectable) {
+              foreach ($log['updated'] as $item) {
+                  if (!$item['rolled_back']) { $hasSelectable = true; break; }
+              }
+          }
+          $entityIds = [];
+          foreach ($log['created'] as $item) {
+              $entityIds[] = (int)$item['id'];
+          }
+          foreach ($log['updated'] as $item) {
+              $entityIds[] = (int)$item['id'];
+          }
+          $entities = Jdb2xmlRollbackHelper::fetchEntities('phoca_tags', $entityIds);
+        ?>
+        <details class="jdb2xml-rollback-item">
+          <summary>Restore point <?php echo htmlspecialchars($log['label'], ENT_QUOTES, 'UTF-8'); ?></summary>
+          <form action="index.php?option=com_jdb2xml" method="post" class="jdb2xml-rollback-form">
+            <input type="hidden" name="task" value="rollbackapply">
+            <input type="hidden" name="rollback_type" value="phoca_tags">
+            <input type="hidden" name="rollback_file" value="<?php echo htmlspecialchars($log['file'], ENT_QUOTES, 'UTF-8'); ?>">
+            <?php echo HTMLHelper::_('form.token'); ?>
+            <table class="jdb2xml-table">
+              <thead>
+                <tr>
+                  <th class="jdb2xml-head-check">Action</th>
+                  <th class="jdb2xml-head-title">Title</th>
+                  <th>Alias</th>
                   <th></th>
                   <th></th>
                 </tr>

@@ -34,10 +34,10 @@ use Joomla\CMS\Uri\Uri;
       </div>
       <?php if (!empty($this->phocaAvailable)) : ?>
         <div class="jdb2xml-export-row">
-          <span class="jdb2xml-export-label">Phoca Gallery Categories</span>
+          <span class="jdb2xml-export-label">Phoca Gallery Tags</span>
           <form action="index.php?option=com_jdb2xml" method="post">
             <input type="hidden" name="task" value="exportmanual">
-            <input type="hidden" name="export_type" value="phocagallerycategories">
+            <input type="hidden" name="export_type" value="phocagallerytags">
             <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
             <button type="submit" class="btn btn-primary">Manual export</button>
           </form>

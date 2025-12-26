@@ -12,7 +12,7 @@ use Joomla\CMS\Uri\Uri;
     <img src="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_logo.svg" alt="JDB2XML logo">
   </div>
   <h2>CSV conversie</h2>
-  <p>Upload CSV-bestanden om tags, categorieën en artikelen om te zetten naar het XML-formaat voor import.</p>
+  <p>Upload CSV-bestanden om tags, Phoca Gallery Tags, categorieën en artikelen om te zetten naar het XML-formaat voor import.</p>
 
   <div class="jdb2xml-tagconversion-section">
     <h3>Tags</h3>
@@ -27,6 +27,26 @@ use Joomla\CMS\Uri\Uri;
         <button type="submit" class="btn btn-primary">Maak XML</button>
       </div>
       <p class="jdb2xml-tagconversion-status" data-file-status="csv_file_tags">
+        Kies een CSV-bestand om te laden.
+      </p>
+    </form>
+  </div>
+
+  <div class="jdb2xml-tagconversion-divider" role="presentation"></div>
+
+  <div class="jdb2xml-tagconversion-section">
+    <h3>Phoca Gallery Tags</h3>
+    <form action="index.php?option=com_jdb2xml" method="post" enctype="multipart/form-data" class="jdb2xml-tagconversion-form">
+      <input type="hidden" name="task" value="csvconversionupload">
+      <input type="hidden" name="conversion_type" value="phocagallerytags">
+      <?php echo HTMLHelper::_('form.token'); ?>
+
+      <div class="jdb2xml-tagconversion-row">
+        <label for="csv_file_phoca_tags"><strong>CSV-bestand</strong></label>
+        <input type="file" name="csv_file" id="csv_file_phoca_tags" accept=".csv,text/csv">
+        <button type="submit" class="btn btn-primary">Maak XML</button>
+      </div>
+      <p class="jdb2xml-tagconversion-status" data-file-status="csv_file_phoca_tags">
         Kies een CSV-bestand om te laden.
       </p>
     </form>

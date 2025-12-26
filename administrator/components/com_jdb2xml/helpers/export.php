@@ -78,52 +78,54 @@ class Jdb2xmlExportHelper
         }
 
         // =====================
-        // PHOCA GALLERY CATEGORIES
+        // PHOCA GALLERY TAGS
         // =====================
-        if ($type === 'all' || $type === 'phocagallerycategories') {
+        if ($type === 'all' || $type === 'phocagallerytags') {
             if (!$phocaAvailable) {
-                if ($type === 'phocagallerycategories') {
-                    return 'Phoca Gallery not available; no export generated.';
+                if ($type === 'phocagallerytags') {
+                    return 'Phoca Gallery tags not available; no export generated.';
                 }
             } else {
             $query = $db->getQuery(true)
                 ->select('*')
                 ->from('#__phocagallery_categories')
-                ->order('parent_id ASC, ordering ASC, title ASC');
+                ->order('ordering ASC, title ASC');
 
-            $cats = $db->setQuery($query)->loadObjectList();
+            $tags = $db->setQuery($query)->loadObjectList();
 
-            $catFile = $dir . '/phocagallery_categories_' . $ts . '.xml';
-            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><phocagallerycategories/>');
+            $tagFile = $dir . '/phocagallery_tags_' . $ts . '.xml';
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><phocagallerytags/>');
 
-            foreach ($cats as $c) {
-                $n = $xml->addChild('category');
+            foreach ($tags as $t) {
+                $n = $xml->addChild('tag');
 
-                $title = $c->title ?? $c->name ?? '';
-                $alias = $c->alias ?? $c->name ?? '';
+                $title = $t->title ?? $t->name ?? '';
+                $alias = $t->alias ?? $t->name ?? '';
 
-                $n->addChild('id', (int) ($c->id ?? 0));
-                $n->addChild('parent_id', (int) ($c->parent_id ?? 0));
+                $n->addChild('id', (int) ($t->id ?? 0));
                 $n->addChild('title', htmlspecialchars((string) $title));
                 $n->addChild('alias', htmlspecialchars((string) $alias));
-                $n->addChild('ordering', (int) ($c->ordering ?? 0));
-                $n->addChild('published', (int) ($c->published ?? 1));
-                $n->addChild('access', (int) ($c->access ?? 1));
-                $n->addChild('language', (string) ($c->language ?? '*'));
+                $n->addChild('ordering', (int) ($t->ordering ?? 0));
+                $n->addChild('published', (int) ($t->published ?? 1));
+                $n->addChild('access', (int) ($t->access ?? 1));
+                $n->addChild('accessuserid', (int) ($t->accessuserid ?? 0));
+                $n->addChild('uploaduserid', (int) ($t->uploaduserid ?? 0));
+                $n->addChild('deleteuserid', (int) ($t->deleteuserid ?? 0));
+                $n->addChild('language', (string) ($t->language ?? '*'));
 
-                self::addCdata($n, 'description', (string) ($c->description ?? ''));
-                self::addCdata($n, 'params', (string) ($c->params ?? ''));
-                self::addCdata($n, 'metadata', (string) ($c->metadata ?? ''));
+                self::addCdata($n, 'description', (string) ($t->description ?? ''));
+                self::addCdata($n, 'params', (string) ($t->params ?? ''));
+                self::addCdata($n, 'metadata', (string) ($t->metadata ?? ''));
             }
 
             $xmlString = self::formatXml($xml);
             if ($xmlString === false) {
-                throw new RuntimeException('XML generation failed (phoca gallery categories)');
+                throw new RuntimeException('XML generation failed (phoca gallery tags)');
             }
-            if (file_put_contents($catFile, $xmlString) === false) {
-                throw new RuntimeException('Cannot write phoca gallery categories XML');
+            if (file_put_contents($tagFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write phoca gallery tags XML');
             }
-            $messages[] = basename($catFile);
+            $messages[] = basename($tagFile);
             }
         }
 
