@@ -1115,6 +1115,11 @@ class Jdb2xmlImportHelper
         )->loadResult();
 
         $coreBody = (string) ($content->introtext ?? '') . (string) ($content->fulltext ?? '');
+        $publishDown = $content->publish_down ?? null;
+        if ($publishDown === '' || $publishDown === '0000-00-00 00:00:00') {
+            $publishDown = null;
+        }
+
         $data = [
             'core_content_id' => (int) $articleId,
             'core_type_alias' => 'com_content.article',
@@ -1130,7 +1135,7 @@ class Jdb2xmlImportHelper
             'core_created_time' => (string) ($content->created ?? ''),
             'core_modified_time' => (string) ($content->modified ?? ''),
             'core_publish_up' => (string) ($content->publish_up ?? ''),
-            'core_publish_down' => (string) ($content->publish_down ?? ''),
+            'core_publish_down' => $publishDown,
             'core_language' => (string) ($content->language ?? '*'),
             'core_author_id' => (int) ($content->created_by ?? 0),
             'core_images' => (string) ($content->images ?? ''),
