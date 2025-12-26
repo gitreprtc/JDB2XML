@@ -829,7 +829,9 @@ class Jdb2xmlImportHelper
             $catid = (int) ($node->catid ?? 0);
             $key = self::buildArticleKey($alias, $catid);
             $now = Factory::getDate()->toSql();
-            $publishUp = Factory::getDate()->setTime(0, 0, 0)->toSql();
+            $publishUp = $now;
+            $publishDownValue = trim((string) ($node->publish_down ?? ''));
+            $hasPublishDown = $publishDownValue !== '';
             $noteText = 'Uploaded by JDB2XML';
             $nullPublishDown = null;
             $userId = (int) Factory::getUser()->id;
@@ -851,7 +853,7 @@ class Jdb2xmlImportHelper
                 ->where('catid=' . (int) $catid);
             $existing = $db->setQuery($query)->loadObject();
 
-            $fields = [
+            $baseFields = [
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
                 'fulltext' => (string) ($node->fulltext ?? ''),
@@ -864,7 +866,6 @@ class Jdb2xmlImportHelper
                 'modified' => $now,
                 'modified_by' => (string) $userId,
                 'publish_up' => $publishUp,
-                'publish_down' => $nullPublishDown,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -876,6 +877,12 @@ class Jdb2xmlImportHelper
                 'metakey' => (string) ($node->metakey ?? ''),
                 'note' => $noteText,
             ];
+
+            $publishDown = $hasPublishDown ? $publishDownValue : $nullPublishDown;
+            $fields = $baseFields;
+            if ($hasPublishDown) {
+                $fields['publish_down'] = $publishDown;
+            }
 
             if ($existing) {
                 $changedLocal = false;
@@ -906,9 +913,12 @@ class Jdb2xmlImportHelper
                             'modified' => $now,
                             'modified_by' => $userId,
                             'publish_up' => $publishUp,
-                            'publish_down' => $nullPublishDown,
                             'note' => $noteText,
                         ];
+
+                        if ($hasPublishDown) {
+                            $override->publish_down = $publishDown;
+                        }
                         $db->updateObject('#__content', $override, 'id');
                         self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
                         self::ensureArticleUcmContent($db, (int) $existing->id);
@@ -943,7 +953,7 @@ class Jdb2xmlImportHelper
                 'modified' => $now,
                 'modified_by' => $userId,
                 'publish_up' => $publishUp,
-                'publish_down' => $nullPublishDown,
+                'publish_down' => $publishDown,
                 'ordering' => (int) ($node->ordering ?? 0),
                 'featured' => (int) ($node->featured ?? 0),
                 'hits' => (int) ($node->hits ?? 0),
@@ -972,9 +982,12 @@ class Jdb2xmlImportHelper
                 'modified' => $now,
                 'modified_by' => $userId,
                 'publish_up' => $publishUp,
-                'publish_down' => $nullPublishDown,
                 'note' => $noteText,
             ];
+
+            if ($hasPublishDown || $publishDown === $nullPublishDown) {
+                $override->publish_down = $publishDown;
+            }
             $db->updateObject('#__content', $override, 'id');
             self::ensureArticleAsset($db, (int) $table->id, $catid, $userId, (string) ($node->title ?? $alias));
             self::ensureArticleUcmContent($db, (int) $table->id);
