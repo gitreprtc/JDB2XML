@@ -547,6 +547,8 @@ class Jdb2xmlImportPreviewHelper
                 continue;
             }
 
+            $now = Factory::getDate()->toSql();
+
             $fields = [
                 'title' => (string) ($node->title ?? ''),
                 'introtext' => (string) ($node->introtext ?? ''),
@@ -554,13 +556,12 @@ class Jdb2xmlImportPreviewHelper
                 'state' => (string) ($node->state ?? ''),
                 'access' => (string) ($node->access ?? ''),
                 'language' => (string) ($node->language ?? ''),
-                'created' => (string) ($node->created ?? ''),
+                'created' => $now,
                 'created_by' => (string) ($node->created_by ?? ''),
                 'created_by_alias' => (string) ($node->created_by_alias ?? ''),
-                'modified' => (string) ($node->modified ?? ''),
+                'modified' => $now,
                 'modified_by' => (string) ($node->modified_by ?? ''),
-                'publish_up' => (string) ($node->publish_up ?? ''),
-                'publish_down' => (string) ($node->publish_down ?? ''),
+                'publish_up' => $now,
                 'ordering' => (string) ($node->ordering ?? ''),
                 'featured' => (string) ($node->featured ?? ''),
                 'hits' => (string) ($node->hits ?? ''),
@@ -572,6 +573,11 @@ class Jdb2xmlImportPreviewHelper
                 'metakey' => (string) ($node->metakey ?? ''),
                 'note' => (string) ($node->note ?? ''),
             ];
+
+            $publishDown = trim((string) ($node->publish_down ?? ''));
+            if ($publishDown !== '') {
+                $fields['publish_down'] = $publishDown;
+            }
 
             $hasChanges = false;
             foreach ($fields as $field => $value) {
