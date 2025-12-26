@@ -1120,6 +1120,11 @@ class Jdb2xmlImportHelper
             $publishDown = null;
         }
 
+        $checkedOutTime = $content->checked_out_time ?? null;
+        if ($checkedOutTime === '' || $checkedOutTime === '0000-00-00 00:00:00') {
+            $checkedOutTime = null;
+        }
+
         $data = [
             'core_content_id' => (int) $articleId,
             'core_type_alias' => 'com_content.article',
@@ -1145,7 +1150,7 @@ class Jdb2xmlImportHelper
             'core_hits' => (int) ($content->hits ?? 0),
             'core_catid' => (int) ($content->catid ?? 0),
             'core_asset_id' => (int) ($content->asset_id ?? 0),
-            'core_checked_out_time' => (string) ($content->checked_out_time ?? ''),
+            'core_checked_out_time' => $checkedOutTime,
             'core_checked_out_user_id' => (int) ($content->checked_out ?? 0),
         ];
 
