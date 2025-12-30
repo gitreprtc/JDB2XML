@@ -382,7 +382,13 @@ class Jdb2xmlTagConversionHelper
             if ($header === '') {
                 continue;
             }
+
             $headerMap[$header] = $index;
+
+            $canonical = preg_replace('/[^a-z0-9]+/', '', $header);
+            if ($canonical !== '' && !isset($headerMap[$canonical])) {
+                $headerMap[$canonical] = $index;
+            }
         }
 
         foreach ($rows as $row) {
@@ -792,15 +798,29 @@ class Jdb2xmlTagConversionHelper
             return mb_strtolower(trim((string) $value));
         }, $row);
 
+        $canonicalNeedles = array_map(static function ($needle) {
+            return preg_replace('/[^a-z0-9]+/', '', $needle);
+        }, $needles);
+
         foreach ($normalized as $value) {
             if ($value === '') {
                 continue;
             }
-            if (in_array($value, $needles, true)) {
-                return true;
-            }
-            foreach ($needles as $needle) {
+
+            $canonicalValue = preg_replace('/[^a-z0-9]+/', '', $value);
+
+            foreach ($needles as $index => $needle) {
+                $canonicalNeedle = $canonicalNeedles[$index];
+
+                if ($value === $needle || ($canonicalNeedle !== '' && $canonicalValue === $canonicalNeedle)) {
+                    return true;
+                }
+
                 if ($needle !== '' && (str_starts_with($value, $needle . '_') || str_starts_with($value, $needle . '-'))) {
+                    return true;
+                }
+
+                if ($canonicalNeedle !== '' && (str_starts_with($canonicalValue, $canonicalNeedle . '_') || str_starts_with($canonicalValue, $canonicalNeedle . '-'))) {
                     return true;
                 }
             }
