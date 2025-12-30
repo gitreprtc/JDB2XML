@@ -78,6 +78,54 @@ class Jdb2xmlExportHelper
         }
 
         // =====================
+        // MENUS
+        // =====================
+        if ($type === 'all' || $type === 'menus') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__menu')
+                ->where('client_id = 0')
+                ->order('lft ASC');
+
+            $menuItems = $db->setQuery($query)->loadObjectList();
+
+            $menuFile = $dir . '/menus_' . $ts . '.xml';
+
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><menus/>');
+
+            foreach ($menuItems as $item) {
+                $n = $xml->addChild('menuitem');
+
+                $n->addChild('id', (int) $item->id);
+                $n->addChild('menutype', htmlspecialchars((string) ($item->menutype ?? '')));
+                $n->addChild('parent_id', (int) $item->parent_id);
+                $n->addChild('level', (int) $item->level);
+                $n->addChild('path', $item->path);
+
+                $n->addChild('title', htmlspecialchars((string) ($item->title ?? '')));
+                $n->addChild('alias', htmlspecialchars((string) ($item->alias ?? '')));
+                $n->addChild('link', htmlspecialchars((string) ($item->link ?? '')));
+                $n->addChild('type', htmlspecialchars((string) ($item->type ?? '')));
+
+                $n->addChild('published', (int) ($item->published ?? 1));
+                $n->addChild('access', (int) ($item->access ?? 1));
+                $n->addChild('language', (string) ($item->language ?? '*'));
+
+                self::addCdata($n, 'params', (string) ($item->params ?? ''));
+                self::addCdata($n, 'note', (string) ($item->note ?? ''));
+            }
+
+            $xmlString = self::formatXml($xml);
+            if ($xmlString === false) {
+                throw new RuntimeException('XML generation failed (menus)');
+            }
+            if (file_put_contents($menuFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write menus XML');
+            }
+            $messages[] = basename($menuFile);
+        }
+
+        // =====================
         // PHOCA GALLERY TAGS
         // =====================
         if ($type === 'all' || $type === 'phocagallerytags') {

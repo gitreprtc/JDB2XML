@@ -26,7 +26,9 @@ class Jdb2xmlImportPreviewHelper
             $fileKey = basename($file);
             $result[$fileKey] = [
                 'categories' => [],
+                'menus' => [],
                 'categoryTree' => [],
+                'menuTree' => [],
                 'phocaTags' => [],
                 'tags' => [],
                 'articles' => [],
@@ -56,6 +58,12 @@ class Jdb2xmlImportPreviewHelper
                 self::previewCategories($db, $xml, $result[$fileKey]);
             }
 
+            if (isset($xml->menus)) {
+                self::previewMenus($db, $xml->menus, $result[$fileKey]);
+            } elseif ($xml->getName() === 'menus') {
+                self::previewMenus($db, $xml, $result[$fileKey]);
+            }
+
             if (isset($xml->phocagallerytags)) {
                 self::previewPhocaGalleryTags($db, $xml->phocagallerytags, $result[$fileKey]);
             } elseif (isset($xml->phocagallerycategories)) {
@@ -78,6 +86,7 @@ class Jdb2xmlImportPreviewHelper
 
             // Build a tree from category paths
             $result[$fileKey]['categoryTree'] = self::buildTree($result[$fileKey]['categories']);
+            $result[$fileKey]['menuTree'] = self::buildTree($result[$fileKey]['menus']);
             $result[$fileKey]['articleTree'] = self::buildArticleTree($result[$fileKey]['articles']);
 
             if ($result[$fileKey]['warnings']) {
@@ -86,6 +95,78 @@ class Jdb2xmlImportPreviewHelper
         }
 
         return $result;
+    }
+
+    private static function previewMenus($db, $menus, array &$out): void
+    {
+        $menutype = (string) ($menus['menutype'] ?? 'mainmenu');
+        foreach ($menus->menuitem as $node) {
+            $itemMenutype = (string) ($node->menutype ?? $menutype);
+            $path = trim((string) ($node->path ?? ''));
+            $title = (string) ($node->title ?? '');
+            $alias = (string) ($node->alias ?? '');
+            $link = (string) ($node->link ?? '');
+            $published = (int) ($node->published ?? 1);
+            $access = (int) ($node->access ?? 1);
+            $language = (string) ($node->language ?? '*');
+
+            if ($path === '') {
+                $out['warnings'][] = 'Menu item missing path';
+                continue;
+            }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__menu')
+                ->where('path=' . $db->quote($path))
+                ->where('menutype=' . $db->quote($itemMenutype))
+                ->where('client_id=0');
+            $existing = $db->setQuery($query)->loadObject();
+
+            $action = 'new';
+            $reason = '';
+            $exclude = false;
+
+            if ($existing) {
+                $action = 'skip';
+                $reason = 'No changes required';
+
+                $fields = [
+                    'title' => $title,
+                    'alias' => $alias,
+                    'link' => $link,
+                    'published' => (string) $published,
+                    'access' => (string) $access,
+                    'language' => $language,
+                    'params' => (string) ($node->params ?? ''),
+                    'note' => (string) ($node->note ?? ''),
+                    'type' => (string) ($node->type ?? ''),
+                ];
+
+                foreach ($fields as $field => $value) {
+                    if ($value === '' || !property_exists($existing, $field)) {
+                        continue;
+                    }
+                    $dbVal = (string) ($existing->$field ?? '');
+                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                        $action = 'update';
+                        $reason = 'Fill empty ' . $field;
+                        break;
+                    }
+                }
+            }
+
+            $out['menus'][] = [
+                'id' => $path,
+                'title' => $title,
+                'alias' => $alias,
+                'displayPath' => $itemMenutype . '/' . $path,
+                'path' => $itemMenutype . '/' . $path,
+                'action' => $action,
+                'reason' => $reason,
+                'exclude' => $exclude,
+            ];
+        }
     }
 
     private static function buildTree(array $rows): array

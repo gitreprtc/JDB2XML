@@ -76,6 +76,7 @@ class Jdb2xmlController extends BaseController
 
         $rows = array_merge(
             $data['categories'] ?? [],
+            $data['menus'] ?? [],
             $data['phocaTags'] ?? [],
             $data['tags'] ?? [],
             $data['articles'] ?? []
@@ -260,7 +261,7 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/export.php';
         $app = $this->getApplicationWithTokenCheck();
         $type = $app->input->getCmd('export_type', 'all');
-        if (!in_array($type, ['categories', 'tags', 'articles', 'phocagallerytags'], true)) {
+        if (!in_array($type, ['categories', 'menus', 'tags', 'articles', 'phocagallerytags'], true)) {
             $type = 'all';
         }
         if ($type === 'phocagallerytags') {
@@ -318,6 +319,8 @@ class Jdb2xmlController extends BaseController
         try {
         if ($type === 'categories') {
             $result = Jdb2xmlTagConversionHelper::convertCsvToCategoriesXml($file['tmp_name']);
+        } elseif ($type === 'menus') {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToMenusXml($file['tmp_name']);
         } elseif ($type === 'phocagallerytags') {
             $result = Jdb2xmlTagConversionHelper::convertCsvToPhocaGalleryTagsXml($file['tmp_name']);
         } elseif ($type === 'articles') {
@@ -329,6 +332,8 @@ class Jdb2xmlController extends BaseController
             $timestamp = date('Ymd_His');
         if ($type === 'categories') {
             $prefix = 'categories';
+        } elseif ($type === 'menus') {
+            $prefix = 'menus';
         } elseif ($type === 'phocagallerytags') {
             $prefix = 'phocagallery_tags';
         } elseif ($type === 'articles') {
@@ -343,6 +348,8 @@ class Jdb2xmlController extends BaseController
 
         if ($type === 'categories') {
             $label = 'categories';
+        } elseif ($type === 'menus') {
+            $label = 'menus';
         } elseif ($type === 'phocagallerytags') {
             $label = 'phoca gallery tags';
         } elseif ($type === 'articles') {

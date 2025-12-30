@@ -275,6 +275,76 @@ class Jdb2xmlTagConversionHelper
         ];
     }
 
+    public static function convertCsvToMenusXml(string $csvPath): array
+    {
+        if (!is_file($csvPath)) {
+            throw new RuntimeException('CSV file not found.');
+        }
+
+        $handle = fopen($csvPath, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to read CSV file.');
+        }
+
+        $delimiter = ',';
+        $menus = [];
+        $order = [];
+
+        $firstRow = fgetcsv($handle, 0, $delimiter);
+        if ($firstRow !== false && count($firstRow) === 1 && strpos((string) $firstRow[0], ';') !== false) {
+            $delimiter = ';';
+            $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
+        }
+
+        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['menutype', 'path', 'title', 'alias', 'link'])) {
+            self::consumeMenuRow($firstRow, $menus, $order);
+        }
+
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            self::consumeMenuRow($row, $menus, $order);
+        }
+
+        fclose($handle);
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+
+        $root = $dom->createElement('menus');
+        $dom->appendChild($root);
+
+        $id = 1;
+        foreach ($order as $key) {
+            $entry = $menus[$key] ?? null;
+            if (!$entry) {
+                continue;
+            }
+
+            $node = $dom->createElement('menuitem');
+            $node->appendChild($dom->createElement('id', (string) $id));
+            $node->appendChild($dom->createElement('menutype', $entry['menutype']));
+            $node->appendChild($dom->createElement('path', $entry['path']));
+            $node->appendChild($dom->createElement('title', $entry['title']));
+            $node->appendChild($dom->createElement('alias', $entry['alias']));
+            $node->appendChild($dom->createElement('link', $entry['link']));
+
+            $params = $dom->createElement('params');
+            $params->appendChild($dom->createCDATASection(''));
+            $node->appendChild($params);
+
+            $node->appendChild($dom->createElement('published', '1'));
+            $node->appendChild($dom->createElement('access', '1'));
+            $node->appendChild($dom->createElement('language', '*'));
+
+            $root->appendChild($node);
+            $id++;
+        }
+
+        return [
+            'xml' => $dom->saveXML(),
+            'count' => $id - 1,
+        ];
+    }
+
     public static function convertCsvToArticlesXml(string $csvPath): array
     {
         if (!is_file($csvPath)) {
@@ -484,6 +554,45 @@ class Jdb2xmlTagConversionHelper
                 $order[] = $path;
             }
         }
+    }
+
+    private static function consumeMenuRow(array $row, array &$menus, array &$order): void
+    {
+        $menutype = isset($row[0]) ? trim((string) $row[0]) : 'mainmenu';
+        $path = isset($row[1]) ? trim((string) $row[1]) : '';
+        $title = isset($row[2]) ? trim((string) $row[2]) : '';
+        $alias = isset($row[3]) ? trim((string) $row[3]) : '';
+        $link = isset($row[4]) ? trim((string) $row[4]) : '';
+
+        if ($path === '') {
+            return;
+        }
+
+        if ($alias === '') {
+            $alias = self::slugify($title !== '' ? $title : $path);
+        }
+
+        if ($title === '') {
+            $segments = explode('/', $path);
+            $title = ucwords(str_replace('-', ' ', end($segments)));
+        }
+
+        if ($link === '') {
+            $link = 'index.php';
+        }
+
+        $key = $menutype . '|' . $path;
+        if (!isset($menus[$key])) {
+            $order[] = $key;
+        }
+
+        $menus[$key] = [
+            'menutype' => $menutype !== '' ? $menutype : 'mainmenu',
+            'path' => $path,
+            'title' => $title,
+            'alias' => $alias,
+            'link' => $link,
+        ];
     }
 
     private static function filterValues(array $values): array

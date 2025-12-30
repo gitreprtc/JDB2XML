@@ -32,6 +32,15 @@ use Joomla\CMS\Uri\Uri;
           <button type="submit" class="btn btn-primary">Manual export</button>
         </form>
       </div>
+      <div class="jdb2xml-export-row">
+        <span class="jdb2xml-export-label">Menus</span>
+        <form action="index.php?option=com_jdb2xml" method="post">
+          <input type="hidden" name="task" value="exportmanual">
+          <input type="hidden" name="export_type" value="menus">
+          <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
+          <button type="submit" class="btn btn-primary">Manual export</button>
+        </form>
+      </div>
       <?php if (!empty($this->phocaAvailable)) : ?>
         <div class="jdb2xml-export-row">
           <span class="jdb2xml-export-label">Phoca Gallery Tags</span>

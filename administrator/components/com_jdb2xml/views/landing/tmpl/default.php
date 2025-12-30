@@ -40,6 +40,9 @@ use Joomla\CMS\Uri\Uri;
       <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_categories_template.csv" download>
         Download categorieën CSV-template
       </a>
+      <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_menus_template.csv" download>
+        Download menu-items CSV-template
+      </a>
       <a class="btn btn-outline-secondary" href="<?php echo Uri::root(); ?>administrator/components/com_jdb2xml/assets/jdb2xml_articles_template.csv" download>
         Download artikel CSV-template
       </a>

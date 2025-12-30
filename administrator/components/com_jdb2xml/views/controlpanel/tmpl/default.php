@@ -53,6 +53,9 @@ function collectActions(array $preview, bool $phocaAvailable): array
         if (!empty($data['categoryTree']) && is_array($data['categoryTree'])) {
             collectActionsFromTree($data['categoryTree'], $actions);
         }
+        if (!empty($data['menuTree']) && is_array($data['menuTree'])) {
+            collectActionsFromTree($data['menuTree'], $actions);
+        }
         if ($phocaAvailable && !empty($data['phocaTags']) && is_array($data['phocaTags'])) {
             foreach ($data['phocaTags'] as $tag) {
                 $action = (string)($tag['action'] ?? '');
@@ -203,8 +206,10 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
           <div class="jdb2xml-grid">
             <?php
               $tree = $data['categoryTree'] ?? [];
+              $menuTree = $data['menuTree'] ?? [];
               $phocaTags = $data['phocaTags'] ?? [];
               $hasTags = !empty($data['tags']) && is_array($data['tags']);
+              $hasMenus = !empty($menuTree) && is_array($menuTree);
               $articleTree = $data['articleTree'] ?? [];
               $hasArticles = !empty($articleTree) && is_array($articleTree);
               $hasPhocaTags = $phocaAvailable && !empty($phocaTags) && is_array($phocaTags);
@@ -307,6 +312,25 @@ function renderTreeWithExclude(array $nodes, string $file, int $level = 0): void
                 <div class="jdb2xml-warn" role="alert">
                   <?php echo $warningText; ?>
                 </div>
+              </div>
+            <?php endif; ?>
+
+            <?php if ($hasMenus): ?>
+              <div class="jdb2xml-left">
+                <h4>Menu items</h4>
+                <?php
+                  echo '<table class="jdb2xml-table">';
+                  echo '<thead><tr>';
+                  echo '<th class="jdb2xml-head-check">Action</th>';
+                  echo '<th class="jdb2xml-head-title">Title</th>';
+                  echo '<th>Path</th>';
+                  echo '<th></th>';
+                  echo '<th></th>';
+                  echo '</tr></thead>';
+                  echo '<tbody>';
+                  renderTreeWithExclude($menuTree, $fileKey);
+                  echo '</tbody></table>';
+                ?>
               </div>
             <?php endif; ?>
           </div>

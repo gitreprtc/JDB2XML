@@ -14,6 +14,8 @@ class Jdb2xmlImportPlan
     /** @var array<int,array> */
     public array $categories = [];
     /** @var array<int,array> */
+    public array $menus = [];
+    /** @var array<int,array> */
     public array $tags = [];
     /** @var array<int,array> */
     public array $articles = [];
@@ -28,6 +30,11 @@ class Jdb2xmlImportPlan
     public function addCategory(array $row): void
     {
         $this->categories[] = $row;
+    }
+
+    public function addMenu(array $row): void
+    {
+        $this->menus[] = $row;
     }
 
     public function addTag(array $row): void
@@ -48,7 +55,7 @@ class Jdb2xmlImportPlan
     public function hasBlocking(): bool
     {
         // Blocking = any record with action 'skipped' and exclude=false
-        foreach (array_merge($this->categories, $this->tags, $this->articles) as $r) {
+        foreach (array_merge($this->categories, $this->menus, $this->tags, $this->articles) as $r) {
             if (($r['action'] ?? '') === 'skipped' && empty($r['exclude'])) {
                 return true;
             }
@@ -61,6 +68,7 @@ class Jdb2xmlImportPlan
         return [
             'fileKey' => $this->fileKey,
             'categories' => $this->categories,
+            'menus' => $this->menus,
             'tags' => $this->tags,
             'articles' => $this->articles,
             'warnings' => $this->warnings,
@@ -71,6 +79,7 @@ class Jdb2xmlImportPlan
     {
         $p = new self((string)($a['fileKey'] ?? ''));
         $p->categories = is_array($a['categories'] ?? null) ? $a['categories'] : [];
+        $p->menus = is_array($a['menus'] ?? null) ? $a['menus'] : [];
         $p->tags = is_array($a['tags'] ?? null) ? $a['tags'] : [];
         $p->articles = is_array($a['articles'] ?? null) ? $a['articles'] : [];
         $p->warnings = is_array($a['warnings'] ?? null) ? $a['warnings'] : [];
