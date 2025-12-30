@@ -445,7 +445,7 @@ class Jdb2xmlImportHelper
     private static function ensureMenuExists($db, string $menutype, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int
     {
         if ($path === '') {
-            return self::getMenuRootId($db, $menutype);
+            return self::getMenuRootId($db, $menutype, !$dryRun);
         }
 
         $query = $db->getQuery(true)
@@ -461,12 +461,12 @@ class Jdb2xmlImportHelper
 
         if ($dryRun) {
             $created++;
-            return self::getMenuRootId($db, $menutype);
+            return self::getMenuRootId($db, $menutype, !$dryRun);
         }
 
         $node = $nodeMap[$path] ?? null;
 
-        $parentId = self::getMenuRootId($db, $menutype);
+        $parentId = self::getMenuRootId($db, $menutype, !$dryRun);
         if (strpos($path, '/') !== false) {
             $parentPath = substr($path, 0, strrpos($path, '/'));
             if ($parentPath !== '') {
@@ -527,7 +527,7 @@ class Jdb2xmlImportHelper
         return (int) $table->id;
     }
 
-    private static function getMenuRootId($db, string $menutype): int
+    private static function getMenuRootId($db, string $menutype, bool $createIfMissing): int
     {
         $query = $db->getQuery(true)
             ->select('id')
@@ -537,7 +537,68 @@ class Jdb2xmlImportHelper
             ->order('parent_id ASC');
 
         $id = (int) $db->setQuery($query, 0, 1)->loadResult();
-        return $id > 0 ? $id : 1;
+        if ($id > 0) {
+            return $id;
+        }
+
+        if (!$createIfMissing) {
+            return 1;
+        }
+
+        return self::createMenuRoot($db, $menutype);
+    }
+
+    private static function createMenuRoot($db, string $menutype): int
+    {
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu_types')
+            ->where('menutype=' . $db->quote($menutype));
+
+        $exists = (int) $db->setQuery($query)->loadResult();
+
+        if ($exists === 0) {
+            $menuTypeTable = Table::getInstance('MenuType');
+            $menuTypeTable->bind([
+                'menutype' => $menutype,
+                'title' => ucwords(str_replace('-', ' ', $menutype)),
+                'description' => ''
+            ]);
+            $menuTypeTable->store();
+        }
+
+        $table = Table::getInstance('Menu');
+
+        $data = [
+            'title' => ucwords(str_replace('-', ' ', $menutype)),
+            'alias' => $menutype,
+            'path'  => $menutype,
+            'menutype' => $menutype,
+            'client_id' => 0,
+            'published' => 1,
+            'access' => 1,
+            'language' => '*',
+            'params' => '',
+            'link' => 'index.php?Itemid=',
+            'type' => 'component',
+            'note' => '',
+            'home' => 0,
+            'parent_id' => 1,
+        ];
+
+        $table->bind($data);
+        $table->setLocation(1, 'last-child');
+        if (!$table->check()) {
+            throw new RuntimeException('Menu root check failed: ' . $table->getError());
+        }
+        if (!$table->store()) {
+            throw new RuntimeException('Menu root save failed: ' . $table->getError());
+        }
+        if (method_exists($table, 'rebuildPath')) {
+            $table->rebuildPath($table->id);
+        }
+
+        return (int) $table->id;
     }
 
     private static function ensureCategoryExists($db, string $extension, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int
