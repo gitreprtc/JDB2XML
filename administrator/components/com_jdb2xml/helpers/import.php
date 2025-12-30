@@ -363,7 +363,10 @@ class Jdb2xmlImportHelper
 
     private static function importMenus($db, $menus, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
     {
-        $menutype = (string) ($menus['menutype'] ?? 'mainmenu');
+        $menutype = trim((string) ($menus['menutype'] ?? 'mainmenu'));
+        if ($menutype === '') {
+            $menutype = 'mainmenu';
+        }
         $nodeMap = [];
         foreach ($menus->menuitem as $node) {
             $nodePath = trim((string) $node->path);
@@ -375,7 +378,10 @@ class Jdb2xmlImportHelper
 
         foreach ($menus->menuitem as $node) {
             $path = trim((string) $node->path);
-            $itemMenutype = (string) ($node->menutype ?? $menutype);
+            $itemMenutype = trim((string) ($node->menutype ?? $menutype));
+            if ($itemMenutype === '') {
+                $itemMenutype = 'mainmenu';
+            }
             $fullKey = $itemMenutype . '/' . $path;
             if ($path === '' || isset($exclude[$fullKey])) { $skipped++; continue; }
             if ($allowed !== null && !isset($allowed[$fullKey])) { $skipped++; continue; }
@@ -534,7 +540,8 @@ class Jdb2xmlImportHelper
             ->from('#__menu')
             ->where('menutype=' . $db->quote($menutype))
             ->where('client_id=0')
-            ->order('parent_id ASC');
+            ->where('parent_id=1')
+            ->order('id ASC');
 
         $id = (int) $db->setQuery($query, 0, 1)->loadResult();
         if ($id > 0) {
