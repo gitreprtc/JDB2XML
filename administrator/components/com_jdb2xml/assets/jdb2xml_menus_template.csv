@@ -1,3 +1,4 @@
-menutype,path,title,alias,link
-mainmenu,mainmenu/home,Home,home,index.php?option=com_content&view=article&id=1
-mainmenu,mainmenu/blog,Blog,blog,index.php?Itemid=102
+menutype,niveau_1,niveau_2,niveau_3,niveau_4,link,type
+mainmenu,Frankrijk,Nievre,,,index.php?option=com_content&view=article&id=10,component
+mainmenu,Frankrijk,Parijs,,,,component
+hidden,Hidden Root,Child Example,,,index.php?Itemid=102,alias

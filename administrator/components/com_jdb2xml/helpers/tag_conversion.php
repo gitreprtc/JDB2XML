@@ -296,15 +296,46 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['menutype', 'path', 'title', 'alias', 'link'])) {
-            self::consumeMenuRow($firstRow, $menus, $order);
+        if ($firstRow === false) {
+            fclose($handle);
+            return ['xml' => '', 'count' => 0];
+        }
+
+        $headers = array_map('trim', $firstRow);
+        if (!empty($headers)) {
+            $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $headers[0]);
+        }
+        $normalizedHeaders = array_map('mb_strtolower', $headers);
+
+        $hasHeader = self::isHeaderRow($normalizedHeaders, ['menutype', 'path', 'title', 'alias', 'link', 'type', 'published', 'access', 'language', 'note', 'params', 'niveau', 'level', 'parent', 'child']);
+        if ($hasHeader) {
+            $rows = [];
+        } else {
+            $rows = [$firstRow];
+            $headers = ['menutype', 'niveau_1', 'niveau_2', 'niveau_3', 'niveau_4', 'title', 'alias', 'link', 'type', 'published', 'access', 'language', 'note', 'params'];
+            $normalizedHeaders = array_map('mb_strtolower', $headers);
         }
 
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-            self::consumeMenuRow($row, $menus, $order);
+            if (count($row) === 1 && $delimiter === ';' && strpos((string) $row[0], ';') !== false) {
+                $row = str_getcsv((string) $row[0], $delimiter);
+            }
+            $rows[] = $row;
         }
 
         fclose($handle);
+
+        $headerMap = [];
+        foreach ($normalizedHeaders as $index => $header) {
+            if ($header === '') {
+                continue;
+            }
+            $headerMap[$header] = $index;
+        }
+
+        foreach ($rows as $row) {
+            self::consumeMenuHierarchyRow($row, $headers, $headerMap, $menus, $order);
+        }
 
         $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
@@ -313,29 +344,46 @@ class Jdb2xmlTagConversionHelper
         $dom->appendChild($root);
 
         $id = 1;
+        $parentIds = [];
         foreach ($order as $key) {
             $entry = $menus[$key] ?? null;
             if (!$entry) {
                 continue;
             }
 
+            $level = substr_count($entry['path'], '/') + 1;
+            $parentPath = '';
+            if (strpos($entry['path'], '/') !== false) {
+                $parentPath = substr($entry['path'], 0, strrpos($entry['path'], '/'));
+            }
+            $parentKey = $entry['menutype'] . '|' . $parentPath;
+            $parentId = $parentIds[$parentKey] ?? 1;
+
             $node = $dom->createElement('menuitem');
             $node->appendChild($dom->createElement('id', (string) $id));
             $node->appendChild($dom->createElement('menutype', $entry['menutype']));
+            $node->appendChild($dom->createElement('parent_id', (string) $parentId));
+            $node->appendChild($dom->createElement('level', (string) $level));
             $node->appendChild($dom->createElement('path', $entry['path']));
+
             $node->appendChild($dom->createElement('title', $entry['title']));
             $node->appendChild($dom->createElement('alias', $entry['alias']));
             $node->appendChild($dom->createElement('link', $entry['link']));
+            $node->appendChild($dom->createElement('type', $entry['type']));
+
+            $node->appendChild($dom->createElement('published', (string) $entry['published']));
+            $node->appendChild($dom->createElement('access', (string) $entry['access']));
+            $node->appendChild($dom->createElement('language', $entry['language']));
 
             $params = $dom->createElement('params');
-            $params->appendChild($dom->createCDATASection(''));
+            $params->appendChild($dom->createCDATASection($entry['params']));
             $node->appendChild($params);
 
-            $node->appendChild($dom->createElement('published', '1'));
-            $node->appendChild($dom->createElement('access', '1'));
-            $node->appendChild($dom->createElement('language', '*'));
+            $node->appendChild($dom->createElement('note', $entry['note']));
 
             $root->appendChild($node);
+
+            $parentIds[$entry['menutype'] . '|' . $entry['path']] = $id;
             $id++;
         }
 
@@ -556,30 +604,96 @@ class Jdb2xmlTagConversionHelper
         }
     }
 
-    private static function consumeMenuRow(array $row, array &$menus, array &$order): void
+    private static function consumeMenuHierarchyRow(array $row, array $headers, array $headerMap, array &$menus, array &$order): void
     {
-        $menutype = isset($row[0]) ? trim((string) $row[0]) : 'mainmenu';
-        $path = isset($row[1]) ? trim((string) $row[1]) : '';
-        $title = isset($row[2]) ? trim((string) $row[2]) : '';
-        $alias = isset($row[3]) ? trim((string) $row[3]) : '';
-        $link = isset($row[4]) ? trim((string) $row[4]) : '';
+        $menutype = trim((string) ($row[$headerMap['menutype'] ?? null] ?? 'mainmenu'));
+        if ($menutype === '') {
+            $menutype = 'mainmenu';
+        }
+
+        $levels = [];
+        foreach ($headers as $index => $header) {
+            $key = mb_strtolower(trim((string) $header));
+            if (!preg_match('/^(niveau|level|parent|child)/', $key)) {
+                continue;
+            }
+            $value = isset($row[$index]) ? trim((string) $row[$index]) : '';
+            if ($value === '') {
+                continue;
+            }
+            $slug = self::slugify($value);
+            if ($slug === '') {
+                continue;
+            }
+            $levels[] = ['title' => $value, 'slug' => $slug];
+        }
+
+        $explicitPath = trim((string) ($row[$headerMap['path'] ?? null] ?? ''));
+        $path = $explicitPath;
+        if ($path === '' && $levels) {
+            $path = implode('/', array_column($levels, 'slug'));
+        }
+
+        if ($path === '') {
+            $fallback = isset($row[1]) ? trim((string) $row[1]) : '';
+            if ($fallback !== '') {
+                $segments = array_map('trim', explode('/', $fallback));
+                $slugSegments = [];
+                foreach ($segments as $seg) {
+                    $slug = self::slugify($seg);
+                    if ($slug !== '') {
+                        $slugSegments[] = $slug;
+                    }
+                }
+                $path = implode('/', $slugSegments);
+            }
+        }
 
         if ($path === '') {
             return;
         }
 
-        if ($alias === '') {
-            $alias = self::slugify($title !== '' ? $title : $path);
+        $title = trim((string) ($row[$headerMap['title'] ?? null] ?? ''));
+        if ($title === '' && $levels) {
+            $title = end($levels)['title'];
         }
-
         if ($title === '') {
             $segments = explode('/', $path);
             $title = ucwords(str_replace('-', ' ', end($segments)));
         }
 
+        $alias = trim((string) ($row[$headerMap['alias'] ?? null] ?? ''));
+        if ($alias === '') {
+            $alias = self::slugify($title !== '' ? $title : $path);
+        }
+
+        $link = trim((string) ($row[$headerMap['link'] ?? null] ?? ''));
         if ($link === '') {
             $link = 'index.php';
         }
+
+        $type = trim((string) ($row[$headerMap['type'] ?? null] ?? ''));
+        if ($type === '') {
+            $type = 'component';
+        }
+
+        $published = trim((string) ($row[$headerMap['published'] ?? null] ?? ''));
+        if ($published === '') {
+            $published = '1';
+        }
+
+        $access = trim((string) ($row[$headerMap['access'] ?? null] ?? ''));
+        if ($access === '') {
+            $access = '1';
+        }
+
+        $language = trim((string) ($row[$headerMap['language'] ?? null] ?? ''));
+        if ($language === '') {
+            $language = '*';
+        }
+
+        $note = trim((string) ($row[$headerMap['note'] ?? null] ?? ''));
+        $params = trim((string) ($row[$headerMap['params'] ?? null] ?? ''));
 
         $key = $menutype . '|' . $path;
         if (!isset($menus[$key])) {
@@ -587,11 +701,17 @@ class Jdb2xmlTagConversionHelper
         }
 
         $menus[$key] = [
-            'menutype' => $menutype !== '' ? $menutype : 'mainmenu',
+            'menutype' => $menutype,
             'path' => $path,
             'title' => $title,
             'alias' => $alias,
             'link' => $link,
+            'type' => $type,
+            'published' => $published,
+            'access' => $access,
+            'language' => $language,
+            'params' => $params,
+            'note' => $note,
         ];
     }
 
