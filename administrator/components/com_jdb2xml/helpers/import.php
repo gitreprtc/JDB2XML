@@ -548,6 +548,19 @@ class Jdb2xmlImportHelper
             return $id;
         }
 
+        // Some menu roots may have been moved or created without parent_id=1.
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu')
+            ->where('menutype=' . $db->quote($menutype))
+            ->where('client_id=0')
+            ->order('level ASC, id ASC');
+
+        $id = (int) $db->setQuery($query, 0, 1)->loadResult();
+        if ($id > 0) {
+            return $id;
+        }
+
         if (!$createIfMissing) {
             return 1;
         }
