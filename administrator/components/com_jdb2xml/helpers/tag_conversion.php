@@ -658,7 +658,13 @@ class Jdb2xmlTagConversionHelper
 
     private static function consumeMenuHierarchyRow(array $row, array $headers, array $headerMap, array &$menus, array &$order): void
     {
-        $menutype = trim((string) ($row[$headerMap['menutype'] ?? null] ?? 'mainmenu'));
+        $menutype = '';
+        if (isset($headerMap['menutype']) && array_key_exists($headerMap['menutype'], $row)) {
+            $menutype = trim((string) $row[$headerMap['menutype']]);
+        }
+        if ($menutype === '' && array_key_exists(0, $row)) {
+            $menutype = trim((string) $row[0]);
+        }
         if ($menutype === '') {
             $menutype = 'mainmenu';
         }
