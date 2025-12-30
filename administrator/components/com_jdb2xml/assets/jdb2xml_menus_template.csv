@@ -1,4 +1,4 @@
-menutype,niveau_1,niveau_2,niveau_3,niveau_4,link,type
-mainmenu,Frankrijk,Nievre,,,index.php?option=com_content&view=article&id=10,component
-mainmenu,Frankrijk,Parijs,,,,component
-hidden,Hidden Root,Child Example,,,index.php?Itemid=102,alias
+id,menutype,niveau_1,niveau_2,niveau_3,niveau_4,link,type
+101,mainmenu,Frankrijk,Nievre,,,index.php?option=com_content&view=article&id=10,component
+102,mainmenu,Frankrijk,Parijs,,,,component
+201,hidden,Hidden Root,Child Example,,,index.php?Itemid=102,alias

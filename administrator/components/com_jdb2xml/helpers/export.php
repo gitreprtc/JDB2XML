@@ -312,7 +312,7 @@ class Jdb2xmlExportHelper
                 });
                 $maxDepth = max($maxDepth, count($segments));
                 $pathParts = [];
-                $row = [];
+                $row = [(string) ($c->id ?? '')];
                 foreach ($segments as $seg) {
                     $pathParts[] = $seg;
                     $path = implode('/', $pathParts);
@@ -321,7 +321,7 @@ class Jdb2xmlExportHelper
                 $rows[] = $row;
             }
 
-            $headers = [];
+            $headers = ['id'];
             for ($i = 1; $i <= $maxDepth; $i++) {
                 $headers[] = 'niveau_' . $i;
             }
@@ -337,7 +337,7 @@ class Jdb2xmlExportHelper
             }
 
             foreach ($rows as $row) {
-                $row = array_pad($row, $maxDepth, '');
+                $row = array_pad($row, count($headers), '');
                 fputcsv($fh, $row);
             }
 
@@ -386,6 +386,7 @@ class Jdb2xmlExportHelper
                 }
 
                 $rows[] = array_merge([
+                    (string) ($item->id ?? ''),
                     $item->menutype ?? 'mainmenu',
                 ], $levels, [
                     $item->link ?? '',
@@ -398,7 +399,7 @@ class Jdb2xmlExportHelper
                 ]);
             }
 
-            $headers = ['menutype'];
+            $headers = ['id', 'menutype'];
             for ($i = 1; $i <= $maxDepth; $i++) {
                 $headers[] = 'niveau_' . $i;
             }
@@ -438,10 +439,11 @@ class Jdb2xmlExportHelper
                 if ($fh === false) {
                     throw new RuntimeException('Cannot create Phoca Gallery tags CSV file');
                 }
-                $headers = ['title', 'alias', 'description', 'published', 'access', 'language'];
+                $headers = ['id', 'title', 'alias', 'description', 'published', 'access', 'language'];
                 fputcsv($fh, $headers);
                 foreach ($tags as $t) {
                     fputcsv($fh, [
+                        (string) ($t->id ?? ''),
                         $t->title ?? $t->name ?? '',
                         $t->alias ?? $t->name ?? '',
                         $t->description ?? '',
@@ -470,9 +472,10 @@ class Jdb2xmlExportHelper
             if ($fh === false) {
                 throw new RuntimeException('Cannot create tags CSV file');
             }
-            fputcsv($fh, ['title', 'metadata']);
+            fputcsv($fh, ['id', 'title', 'metadata']);
             foreach ($tags as $t) {
                 fputcsv($fh, [
+                    (string) ($t->id ?? ''),
                     $t->title ?? '',
                     $t->metadata ?? '',
                 ]);
@@ -498,13 +501,14 @@ class Jdb2xmlExportHelper
                 throw new RuntimeException('Cannot create articles CSV file');
             }
             $headers = [
-                'catid', 'title', 'alias', 'introtext', 'fulltext', 'state', 'access', 'language',
+                'id', 'catid', 'title', 'alias', 'introtext', 'fulltext', 'state', 'access', 'language',
                 'created_by', 'created_by_alias', 'modified_by', 'ordering', 'featured', 'hits', 'images',
                 'urls', 'attribs', 'metadata', 'metadesc', 'metakey', 'note',
             ];
             fputcsv($fh, $headers);
             foreach ($articles as $a) {
                 fputcsv($fh, [
+                    (string) ($a->id ?? ''),
                     (string) ($a->catid ?? ''),
                     $a->title ?? '',
                     $a->alias ?? '',
