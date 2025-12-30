@@ -11,6 +11,11 @@ class Jdb2xmlExportHelper
         return self::runType($dir, 'all');
     }
 
+    public static function runCsv(string $dir): string
+    {
+        return self::runCsvType($dir, 'all');
+    }
+
     public static function runType(string $dir, string $type): string
     {
         if (!is_dir($dir)) @mkdir($dir, 0755, true);
@@ -267,6 +272,268 @@ class Jdb2xmlExportHelper
 
         $suffix = $type === 'all' ? 'full' : $type;
         return 'Export completed (' . $suffix . '): ' . implode(' & ', $messages);
+    }
+
+    public static function runCsvType(string $dir, string $type): string
+    {
+        if (!is_dir($dir)) @mkdir($dir, 0755, true);
+        $db = Factory::getDbo();
+        $ts = date('Ymd_His');
+        $messages = [];
+        $phocaAvailable = self::isPhocaAvailable($db);
+
+        // =====================
+        // CATEGORIES (CSV)
+        // =====================
+        if ($type === 'all' || $type === 'categories') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__categories')
+                ->order('lft ASC');
+
+            $cats = $db->setQuery($query)->loadObjectList();
+
+            $rows = [];
+            $maxDepth = 0;
+            $titleMap = [];
+            foreach ($cats as $c) {
+                if ((int) ($c->level ?? 0) < 1) {
+                    continue;
+                }
+                $titleMap[$c->path] = $c->title ?? $c->alias ?? $c->path;
+            }
+
+            foreach ($cats as $c) {
+                if ((int) ($c->level ?? 0) < 1) {
+                    continue;
+                }
+                $segments = array_filter(explode('/', (string) $c->path), static function ($seg) {
+                    return $seg !== '';
+                });
+                $maxDepth = max($maxDepth, count($segments));
+                $pathParts = [];
+                $row = [];
+                foreach ($segments as $seg) {
+                    $pathParts[] = $seg;
+                    $path = implode('/', $pathParts);
+                    $row[] = $titleMap[$path] ?? str_replace('-', ' ', $seg);
+                }
+                $rows[] = $row;
+            }
+
+            $headers = [];
+            for ($i = 1; $i <= $maxDepth; $i++) {
+                $headers[] = 'niveau_' . $i;
+            }
+
+            $catFile = $dir . '/categories_' . $ts . '.csv';
+            $fh = fopen($catFile, 'wb');
+            if ($fh === false) {
+                throw new RuntimeException('Cannot create categories CSV file');
+            }
+
+            if ($headers) {
+                fputcsv($fh, $headers);
+            }
+
+            foreach ($rows as $row) {
+                $row = array_pad($row, $maxDepth, '');
+                fputcsv($fh, $row);
+            }
+
+            fclose($fh);
+            $messages[] = basename($catFile);
+        }
+
+        // =====================
+        // MENUS (CSV)
+        // =====================
+        if ($type === 'all' || $type === 'menus') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__menu')
+                ->where('client_id = 0')
+                ->order('lft ASC');
+
+            $menuItems = $db->setQuery($query)->loadObjectList();
+
+            $titleMap = [];
+            foreach ($menuItems as $item) {
+                if ((int) ($item->level ?? 0) < 1) {
+                    continue;
+                }
+                $key = $item->menutype . '|' . $item->path;
+                $titleMap[$key] = $item->title ?? $item->alias ?? $item->path;
+            }
+
+            $rows = [];
+            $maxDepth = 0;
+            foreach ($menuItems as $item) {
+                if ((int) ($item->level ?? 0) < 1) {
+                    continue;
+                }
+                $segments = array_filter(explode('/', (string) $item->path), static function ($seg) {
+                    return $seg !== '';
+                });
+                $maxDepth = max($maxDepth, count($segments));
+                $pathParts = [];
+                $levels = [];
+                foreach ($segments as $seg) {
+                    $pathParts[] = $seg;
+                    $path = implode('/', $pathParts);
+                    $key = $item->menutype . '|' . $path;
+                    $levels[] = $titleMap[$key] ?? str_replace('-', ' ', $seg);
+                }
+
+                $rows[] = array_merge([
+                    $item->menutype ?? 'mainmenu',
+                ], $levels, [
+                    $item->link ?? '',
+                    $item->type ?? '',
+                    (string) ($item->published ?? 1),
+                    (string) ($item->access ?? 1),
+                    (string) ($item->language ?? '*'),
+                    $item->note ?? '',
+                    (string) ($item->params ?? ''),
+                ]);
+            }
+
+            $headers = ['menutype'];
+            for ($i = 1; $i <= $maxDepth; $i++) {
+                $headers[] = 'niveau_' . $i;
+            }
+            $headers = array_merge($headers, ['link', 'type', 'published', 'access', 'language', 'note', 'params']);
+
+            $menuFile = $dir . '/menus_' . $ts . '.csv';
+            $fh = fopen($menuFile, 'wb');
+            if ($fh === false) {
+                throw new RuntimeException('Cannot create menus CSV file');
+            }
+            fputcsv($fh, $headers);
+            foreach ($rows as $row) {
+                $row = array_pad($row, count($headers), '');
+                fputcsv($fh, $row);
+            }
+            fclose($fh);
+            $messages[] = basename($menuFile);
+        }
+
+        // =====================
+        // PHOCA GALLERY TAGS (CSV)
+        // =====================
+        if ($type === 'all' || $type === 'phocagallerytags') {
+            if (!$phocaAvailable) {
+                if ($type === 'phocagallerytags') {
+                    return 'Phoca Gallery tags not available; no export generated.';
+                }
+            } else {
+                $query = $db->getQuery(true)
+                    ->select('*')
+                    ->from('#__phocagallery_categories')
+                    ->order('ordering ASC, title ASC');
+
+                $tags = $db->setQuery($query)->loadObjectList();
+                $tagFile = $dir . '/phocagallery_tags_' . $ts . '.csv';
+                $fh = fopen($tagFile, 'wb');
+                if ($fh === false) {
+                    throw new RuntimeException('Cannot create Phoca Gallery tags CSV file');
+                }
+                $headers = ['title', 'alias', 'description', 'published', 'access', 'language'];
+                fputcsv($fh, $headers);
+                foreach ($tags as $t) {
+                    fputcsv($fh, [
+                        $t->title ?? $t->name ?? '',
+                        $t->alias ?? $t->name ?? '',
+                        $t->description ?? '',
+                        (string) ($t->published ?? 1),
+                        (string) ($t->access ?? 1),
+                        (string) ($t->language ?? '*'),
+                    ]);
+                }
+                fclose($fh);
+                $messages[] = basename($tagFile);
+            }
+        }
+
+        // =====================
+        // TAGS (CSV)
+        // =====================
+        if ($type === 'all' || $type === 'tags') {
+            $query = $db->getQuery(true)
+                ->select('*')->from('#__tags')
+                ->order('title ASC');
+
+            $tags = $db->setQuery($query)->loadObjectList();
+
+            $tagFile = $dir . '/tags_' . $ts . '.csv';
+            $fh = fopen($tagFile, 'wb');
+            if ($fh === false) {
+                throw new RuntimeException('Cannot create tags CSV file');
+            }
+            fputcsv($fh, ['title', 'metadata']);
+            foreach ($tags as $t) {
+                fputcsv($fh, [
+                    $t->title ?? '',
+                    $t->metadata ?? '',
+                ]);
+            }
+            fclose($fh);
+            $messages[] = basename($tagFile);
+        }
+
+        // =====================
+        // ARTICLES (CSV)
+        // =====================
+        if ($type === 'all' || $type === 'articles') {
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__content')
+                ->order('id ASC');
+
+            $articles = $db->setQuery($query)->loadObjectList();
+
+            $articleFile = $dir . '/articles_' . $ts . '.csv';
+            $fh = fopen($articleFile, 'wb');
+            if ($fh === false) {
+                throw new RuntimeException('Cannot create articles CSV file');
+            }
+            $headers = [
+                'catid', 'title', 'alias', 'introtext', 'fulltext', 'state', 'access', 'language',
+                'created_by', 'created_by_alias', 'modified_by', 'ordering', 'featured', 'hits', 'images',
+                'urls', 'attribs', 'metadata', 'metadesc', 'metakey', 'note',
+            ];
+            fputcsv($fh, $headers);
+            foreach ($articles as $a) {
+                fputcsv($fh, [
+                    (string) ($a->catid ?? ''),
+                    $a->title ?? '',
+                    $a->alias ?? '',
+                    $a->introtext ?? '',
+                    $a->fulltext ?? '',
+                    (string) ($a->state ?? 0),
+                    (string) ($a->access ?? 1),
+                    (string) ($a->language ?? '*'),
+                    (string) ($a->created_by ?? ''),
+                    $a->created_by_alias ?? '',
+                    (string) ($a->modified_by ?? ''),
+                    (string) ($a->ordering ?? 0),
+                    (string) ($a->featured ?? 0),
+                    (string) ($a->hits ?? 0),
+                    $a->images ?? '',
+                    $a->urls ?? '',
+                    $a->attribs ?? '',
+                    $a->metadata ?? '',
+                    $a->metadesc ?? '',
+                    $a->metakey ?? '',
+                    $a->note ?? '',
+                ]);
+            }
+            fclose($fh);
+            $messages[] = basename($articleFile);
+        }
+
+        $suffix = $type === 'all' ? 'full-csv' : $type . '-csv';
+        return 'CSV export completed (' . $suffix . '): ' . implode(' & ', $messages);
     }
 
     private static function isPhocaAvailable($db): bool

@@ -49,7 +49,7 @@ use Joomla\CMS\Uri\Uri;
     </div>
     <div class="jdb2xml-landing-paths">
       <p><strong>Import locatie (XML):</strong> <code>/media/com_jdb2xml/import</code></p>
-      <p><strong>Export locatie (XML):</strong> <code>/media/com_jdb2xml/export</code></p>
+      <p><strong>Export locatie (XML/CSV):</strong> <code>/media/com_jdb2xml/export</code></p>
     </div>
   </div>
 

@@ -290,6 +290,40 @@ class Jdb2xmlController extends BaseController
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
     }
 
+    public function exportcsv()
+    {
+        require_once __DIR__ . '/helpers/export.php';
+        $app = $this->getApplicationWithTokenCheck();
+        $type = $app->input->getCmd('export_type', 'all');
+        if (!in_array($type, ['categories', 'menus', 'tags', 'articles', 'phocagallerytags'], true)) {
+            $type = 'all';
+        }
+        if ($type === 'phocagallerytags') {
+            $db = Factory::getDbo();
+            try {
+                $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+            } catch (Throwable $e) {
+                $phocaColumns = [];
+            }
+            if (empty($phocaColumns)) {
+                $app->enqueueMessage('Phoca Gallery tags not available; nothing to export.', 'warning');
+                $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+                return;
+            }
+        }
+
+        try {
+            $result = Jdb2xmlExportHelper::runCsvType(JPATH_ROOT . '/media/com_jdb2xml/export', $type);
+            $app->enqueueMessage($result, 'message');
+            Jdb2xmlExportHelper::logBatch($type . '-csv', true);
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+            Jdb2xmlExportHelper::logBatch($type . '-csv', false, $e->getMessage());
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
     public function csvconversionupload()
     {
         $app = $this->getApplicationWithTokenCheck();
