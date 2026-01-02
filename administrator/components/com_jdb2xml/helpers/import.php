@@ -27,8 +27,8 @@ class Jdb2xmlImportHelper
         // Rollback log (only when not dry-run)
         $rollbackFile = null;
         $rollback = [
-            'created' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
-            'updated' => ['categories' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
+            'created' => ['categories' => [], 'menus' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
+            'updated' => ['categories' => [], 'menus' => [], 'phoca_tags' => [], 'tags' => [], 'articles' => []],
             'timestamp' => date('c'),
         ];
         if (!$dryRun) {
@@ -43,12 +43,14 @@ class Jdb2xmlImportHelper
         if (!is_dir($failedDir)) @mkdir($failedDir, 0755, true);
 
         $createdCats = $changedCats = $skippedCats = 0;
+        $createdMenus = $changedMenus = $skippedMenus = 0;
         $createdPhocaTags = $changedPhocaTags = $skippedPhocaTags = 0;
         $createdTags = $changedTags = $skippedTags = 0;
         $createdArticles = $changedArticles = $skippedArticles = 0;
         $warnings = [];
         $summaries = [
             'categories' => false,
+            'menus' => false,
             'phoca_tags' => false,
             'tags' => false,
             'articles' => false,
@@ -88,6 +90,7 @@ class Jdb2xmlImportHelper
 
         // If preview exists for selected file, only import categories included in preview
         $allowedCategorySet = null;
+        $allowedMenuSet = null;
         $allowedPhocaTagSet = null;
         $allowedArticleSet = null;
         $allowTags = true;
@@ -104,6 +107,15 @@ class Jdb2xmlImportHelper
                         continue;
                     }
                     $allowedCategorySet[$key] = true;
+                }
+                $allowedMenuSet = [];
+                $rows = $previewData['menus'] ?? [];
+                foreach ($rows as $row) {
+                    $key = (string)($row['path'] ?? $row['id'] ?? '');
+                    if ($key === '' || isset($excludeSet[$key])) {
+                        continue;
+                    }
+                    $allowedMenuSet[$key] = true;
                 }
                 $allowTags = !empty($previewData['tags']) && is_array($previewData['tags']);
                 $allowArticles = !empty($previewData['articles']) && is_array($previewData['articles']);
@@ -166,6 +178,14 @@ class Jdb2xmlImportHelper
                         $summaries['categories'] = true;
                     }
 
+                    if (isset($xml->menus)) {
+                        self::importMenus($db, $xml->menus, $dryRun, $excludeSet, $createdMenus, $changedMenus, $skippedMenus, $warnings, $rollback, $allowedMenuSet);
+                        $summaries['menus'] = true;
+                    } elseif ($xml->getName() === 'menus') {
+                        self::importMenus($db, $xml, $dryRun, $excludeSet, $createdMenus, $changedMenus, $skippedMenus, $warnings, $rollback, $allowedMenuSet);
+                        $summaries['menus'] = true;
+                    }
+
                     if ($allowPhocaTags) {
                         if (isset($xml->phocagallerytags)) {
                             self::importPhocaGalleryTags($db, $xml->phocagallerytags, $dryRun, $excludeSet, $createdPhocaTags, $changedPhocaTags, $skippedPhocaTags, $warnings, $rollback, $allowedPhocaTagSet);
@@ -220,6 +240,9 @@ class Jdb2xmlImportHelper
             $msg[] = 'Import completed' . ($dryRun ? ' (dry-run)' : '') . '.';
             if ($summaries['categories']) {
                 $msg[] = 'Categories: new=' . $createdCats . ', changed=' . $changedCats . ', skipped=' . $skippedCats;
+            }
+            if ($summaries['menus']) {
+                $msg[] = 'Menus: new=' . $createdMenus . ', changed=' . $changedMenus . ', skipped=' . $skippedMenus;
             }
             if ($summaries['phoca_tags']) {
                 $msg[] = 'Phoca Gallery tags: new=' . $createdPhocaTags . ', changed=' . $changedPhocaTags . ', skipped=' . $skippedPhocaTags;
@@ -336,6 +359,266 @@ class Jdb2xmlImportHelper
 
             self::ensureCategoryExists($db, $extension, $path, $nodeMap, $dryRun, $created, $warnings, $rollback);
         }
+    }
+
+    private static function importMenus($db, $menus, bool $dryRun, array $exclude, int &$created, int &$changed, int &$skipped, array &$warnings, array &$rollback, ?array $allowed = null): void
+    {
+        $menutype = trim((string) ($menus['menutype'] ?? 'mainmenu'));
+        if ($menutype === '') {
+            $menutype = 'mainmenu';
+        }
+        $nodeMap = [];
+        foreach ($menus->menuitem as $node) {
+            $nodePath = trim((string) $node->path);
+            if ($nodePath === '') {
+                continue;
+            }
+            $nodeMap[$nodePath] = $node;
+        }
+
+        foreach ($menus->menuitem as $node) {
+            $path = trim((string) $node->path);
+            $itemMenutype = trim((string) ($node->menutype ?? $menutype));
+            if ($itemMenutype === '') {
+                $itemMenutype = 'mainmenu';
+            }
+            $fullKey = $itemMenutype . '/' . $path;
+            if ($path === '' || isset($exclude[$fullKey])) { $skipped++; continue; }
+            if ($allowed !== null && !isset($allowed[$fullKey])) { $skipped++; continue; }
+
+            $query = $db->getQuery(true)
+                ->select('*')->from('#__menu')
+                ->where('path=' . $db->quote($path))
+                ->where('menutype=' . $db->quote($itemMenutype))
+                ->where('client_id=0');
+
+            $existing = $db->setQuery($query)->loadObject();
+
+            $map = [
+                'note'        => (string) ($node->note ?? ''),
+                'language'    => (string) ($node->language ?? ''),
+                'params'      => (string) ($node->params ?? ''),
+                'access'      => (string) ($node->access ?? ''),
+                'published'   => (string) ($node->published ?? ''),
+                'link'        => (string) ($node->link ?? ''),
+                'type'        => (string) ($node->type ?? ''),
+            ];
+
+            if ($existing) {
+                $hasChanges = false;
+                $before = ['id' => (int)$existing->id, 'fields' => []];
+
+                $xmlTitle = (string) ($node->title ?? '');
+                if ($xmlTitle !== '' && (string) ($existing->title ?? '') !== $xmlTitle) {
+                    $before['fields']['title'] = (string) ($existing->title ?? '');
+                    $existing->title = $xmlTitle;
+                    $hasChanges = true;
+                }
+
+                $xmlAlias = (string) ($node->alias ?? '');
+                if ($xmlAlias !== '' && (string) ($existing->alias ?? '') !== $xmlAlias) {
+                    $before['fields']['alias'] = (string) ($existing->alias ?? '');
+                    $existing->alias = $xmlAlias;
+                    $hasChanges = true;
+                }
+
+                foreach ($map as $field => $value) {
+                    if ($value === '' || !property_exists($existing, $field)) continue;
+                    $dbVal = (string) ($existing->$field ?? '');
+                    if ($dbVal === '' || $dbVal === '{}' || $dbVal === '[]') {
+                        $before['fields'][$field] = $dbVal;
+                        $existing->$field = $value;
+                        $hasChanges = true;
+                    }
+                }
+
+                if ($hasChanges) {
+                    if (!$dryRun) {
+                        $db->updateObject('#__menu', $existing, 'id');
+                        $rollback['updated']['menus'][] = $before;
+                    }
+                    $changed++;
+                } else {
+                    $skipped++;
+                }
+                continue;
+            }
+
+            self::ensureMenuExists($db, $itemMenutype, $path, $nodeMap, $dryRun, $created, $warnings, $rollback);
+        }
+    }
+
+    private static function ensureMenuExists($db, string $menutype, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int
+    {
+        if ($path === '') {
+            return self::getMenuRootId($db, $menutype, !$dryRun);
+        }
+
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu')
+            ->where('path=' . $db->quote($path))
+            ->where('menutype=' . $db->quote($menutype))
+            ->where('client_id=0');
+        $existingId = (int) $db->setQuery($query)->loadResult();
+        if ($existingId > 0) {
+            return $existingId;
+        }
+
+        if ($dryRun) {
+            $created++;
+            return self::getMenuRootId($db, $menutype, !$dryRun);
+        }
+
+        $node = $nodeMap[$path] ?? null;
+
+        $parentId = self::getMenuRootId($db, $menutype, !$dryRun);
+        if (strpos($path, '/') !== false) {
+            $parentPath = substr($path, 0, strrpos($path, '/'));
+            if ($parentPath !== '') {
+                $parentId = self::ensureMenuExists($db, $menutype, $parentPath, $nodeMap, $dryRun, $created, $warnings, $rollback);
+            }
+        }
+
+        $segment = $path;
+        if (strpos($path, '/') !== false) {
+            $segment = substr($path, strrpos($path, '/') + 1);
+        }
+
+        $titleFallback = ucwords(str_replace('-', ' ', $segment));
+        $aliasFallback = $segment;
+
+        $table = Table::getInstance('Menu');
+        $nodeTitle = $node ? (string) ($node->title ?? '') : '';
+        $nodeAlias = $node ? (string) ($node->alias ?? '') : '';
+        $nodePublished = $node ? (int) ($node->published ?? 1) : 1;
+        $nodeAccess = $node ? (int) ($node->access ?? 1) : 1;
+        $nodeLanguage = $node ? (string) ($node->language ?? '*') : '*';
+        $nodeParams = $node ? (string) ($node->params ?? '') : '';
+        $nodeLink = $node ? (string) ($node->link ?? '') : '';
+        $nodeType = $node ? (string) ($node->type ?? 'component') : 'component';
+        $nodeNote = $node ? (string) ($node->note ?? '') : '';
+
+        $data = [
+            'title' => $nodeTitle !== '' ? $nodeTitle : $titleFallback,
+            'alias' => $nodeAlias !== '' ? $nodeAlias : $aliasFallback,
+            'path'  => $path,
+            'menutype' => $menutype,
+            'client_id' => 0,
+            'published' => $nodePublished,
+            'access' => $nodeAccess,
+            'language' => $nodeLanguage,
+            'params' => $nodeParams,
+            'link' => $nodeLink !== '' ? $nodeLink : 'index.php',
+            'type' => $nodeType,
+            'note' => $nodeNote,
+            'parent_id' => $parentId
+        ];
+
+        $table->bind($data);
+        $table->setLocation($parentId, 'last-child');
+        if (!$table->check()) {
+            throw new RuntimeException('Menu item check failed: ' . $table->getError());
+        }
+        if (!$table->store()) {
+            throw new RuntimeException('Menu item save failed: ' . $table->getError());
+        }
+        if (method_exists($table, 'rebuildPath')) {
+            $table->rebuildPath($table->id);
+        }
+
+        $created++;
+        $rollback['created']['menus'][] = (int) $table->id;
+
+        return (int) $table->id;
+    }
+
+    private static function getMenuRootId($db, string $menutype, bool $createIfMissing): int
+    {
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu')
+            ->where('menutype=' . $db->quote($menutype))
+            ->where('client_id=0')
+            ->where('parent_id=1')
+            ->order('id ASC');
+
+        $id = (int) $db->setQuery($query, 0, 1)->loadResult();
+        if ($id > 0) {
+            return $id;
+        }
+
+        // Some menu roots may have been moved or created without parent_id=1.
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu')
+            ->where('menutype=' . $db->quote($menutype))
+            ->where('client_id=0')
+            ->order('level ASC, id ASC');
+
+        $id = (int) $db->setQuery($query, 0, 1)->loadResult();
+        if ($id > 0) {
+            return $id;
+        }
+
+        if (!$createIfMissing) {
+            return 1;
+        }
+
+        return self::createMenuRoot($db, $menutype);
+    }
+
+    private static function createMenuRoot($db, string $menutype): int
+    {
+        $query = $db->getQuery(true)
+            ->select('id')
+            ->from('#__menu_types')
+            ->where('menutype=' . $db->quote($menutype));
+
+        $exists = (int) $db->setQuery($query)->loadResult();
+
+        if ($exists === 0) {
+            $menuTypeTable = Table::getInstance('MenuType');
+            $menuTypeTable->bind([
+                'menutype' => $menutype,
+                'title' => ucwords(str_replace('-', ' ', $menutype)),
+                'description' => ''
+            ]);
+            $menuTypeTable->store();
+        }
+
+        $table = Table::getInstance('Menu');
+
+        $data = [
+            'title' => ucwords(str_replace('-', ' ', $menutype)),
+            'alias' => $menutype,
+            'path'  => $menutype,
+            'menutype' => $menutype,
+            'client_id' => 0,
+            'published' => 1,
+            'access' => 1,
+            'language' => '*',
+            'params' => '',
+            'link' => 'index.php?Itemid=',
+            'type' => 'component',
+            'note' => '',
+            'home' => 0,
+            'parent_id' => 1,
+        ];
+
+        $table->bind($data);
+        $table->setLocation(1, 'last-child');
+        if (!$table->check()) {
+            throw new RuntimeException('Menu root check failed: ' . $table->getError());
+        }
+        if (!$table->store()) {
+            throw new RuntimeException('Menu root save failed: ' . $table->getError());
+        }
+        if (method_exists($table, 'rebuildPath')) {
+            $table->rebuildPath($table->id);
+        }
+
+        return (int) $table->id;
     }
 
     private static function ensureCategoryExists($db, string $extension, string $path, array $nodeMap, bool $dryRun, int &$created, array &$warnings, array &$rollback): int

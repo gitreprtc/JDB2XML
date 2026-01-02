@@ -27,11 +27,25 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['title', 'tag', 'tags', 'metadata', 'metakey', 'meta'])) {
-            self::consumeRow($firstRow, $tags, $order);
+        $idIndex = null;
+        if ($firstRow !== false) {
+            $normalizedFirst = array_map('mb_strtolower', array_map('trim', $firstRow));
+            if (!empty($normalizedFirst)) {
+                $normalizedFirst[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $normalizedFirst[0]);
+            }
+
+            if (self::isHeaderRow($normalizedFirst, ['title', 'tag', 'tags', 'metadata', 'metakey', 'meta', 'id'])) {
+                $idIndex = array_search('id', $normalizedFirst, true);
+            } else {
+                self::consumeRow($firstRow, $tags, $order);
+            }
         }
 
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if ($idIndex !== null && array_key_exists($idIndex, $row)) {
+                unset($row[$idIndex]);
+                $row = array_values($row);
+            }
             self::consumeRow($row, $tags, $order);
         }
 
@@ -111,17 +125,28 @@ class Jdb2xmlTagConversionHelper
         }
         $headers = array_map('mb_strtolower', $headers);
 
-        $hasHeader = self::isHeaderRow($headers, ['title', 'alias', 'description', 'published', 'access', 'language']);
+        $idIndex = array_search('id', $headers, true);
+        $hasHeader = self::isHeaderRow($headers, ['title', 'alias', 'description', 'published', 'access', 'language', 'id']);
         if (!$hasHeader) {
             $rows = [$firstRow];
             $headers = ['title', 'alias', 'description'];
+            $idIndex = null;
         } else {
             $rows = [];
+        }
+
+        if ($idIndex !== null) {
+            unset($headers[$idIndex]);
+            $headers = array_values($headers);
         }
 
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             if (count($row) === 1 && $delimiter === ';' && strpos((string) $row[0], ';') !== false) {
                 $row = str_getcsv((string) $row[0], $delimiter);
+            }
+            if ($idIndex !== null && array_key_exists($idIndex, $row)) {
+                unset($row[$idIndex]);
+                $row = array_values($row);
             }
             $rows[] = $row;
         }
@@ -207,11 +232,25 @@ class Jdb2xmlTagConversionHelper
             $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
         }
 
-        if ($firstRow !== false && !self::isHeaderRow($firstRow, ['categorie', 'categories', 'category', 'level', 'niveau', 'path', 'title', 'alias'])) {
-            self::consumeCategoryRow($firstRow, $categories, $order);
+        $skipIdIndex = null;
+        if ($firstRow !== false) {
+            $normalizedFirst = array_map('mb_strtolower', array_map('trim', $firstRow));
+            if (!empty($normalizedFirst)) {
+                $normalizedFirst[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $normalizedFirst[0]);
+            }
+
+            if (!self::isHeaderRow($normalizedFirst, ['categorie', 'categories', 'category', 'level', 'niveau', 'path', 'title', 'alias', 'id'])) {
+                self::consumeCategoryRow($firstRow, $categories, $order);
+            } else {
+                $skipIdIndex = array_search('id', $normalizedFirst, true);
+            }
         }
 
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if ($skipIdIndex !== null && array_key_exists($skipIdIndex, $row)) {
+                unset($row[$skipIdIndex]);
+                $row = array_values($row);
+            }
             self::consumeCategoryRow($row, $categories, $order);
         }
 
@@ -266,6 +305,143 @@ class Jdb2xmlTagConversionHelper
             $node->appendChild($dom->createElement('language', '*'));
 
             $root->appendChild($node);
+            $id++;
+        }
+
+        return [
+            'xml' => $dom->saveXML(),
+            'count' => $id - 1,
+        ];
+    }
+
+    public static function convertCsvToMenusXml(string $csvPath): array
+    {
+        if (!is_file($csvPath)) {
+            throw new RuntimeException('CSV file not found.');
+        }
+
+        $handle = fopen($csvPath, 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to read CSV file.');
+        }
+
+        $delimiter = ',';
+        $menus = [];
+        $order = [];
+
+        $firstRow = fgetcsv($handle, 0, $delimiter);
+        if ($firstRow !== false && count($firstRow) === 1 && strpos((string) $firstRow[0], ';') !== false) {
+            $delimiter = ';';
+            $firstRow = str_getcsv((string) $firstRow[0], $delimiter);
+        }
+
+        if ($firstRow === false) {
+            fclose($handle);
+            return ['xml' => '', 'count' => 0];
+        }
+
+        $headers = array_map('trim', $firstRow);
+        if (!empty($headers)) {
+            $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $headers[0]);
+        }
+        $normalizedHeaders = array_map('mb_strtolower', $headers);
+
+        $idIndex = array_search('id', $normalizedHeaders, true);
+        $hasHeader = self::isHeaderRow($normalizedHeaders, ['menutype', 'path', 'title', 'alias', 'link', 'type', 'published', 'access', 'language', 'note', 'params', 'niveau', 'level', 'parent', 'child', 'id']);
+        if ($hasHeader) {
+            $rows = [];
+        } else {
+            $rows = [$firstRow];
+            $headers = ['menutype', 'niveau_1', 'niveau_2', 'niveau_3', 'niveau_4', 'title', 'alias', 'link', 'type', 'published', 'access', 'language', 'note', 'params'];
+            $normalizedHeaders = array_map('mb_strtolower', $headers);
+            $idIndex = null;
+        }
+
+        if ($idIndex !== null) {
+            unset($headers[$idIndex]);
+            unset($normalizedHeaders[$idIndex]);
+            $headers = array_values($headers);
+            $normalizedHeaders = array_values($normalizedHeaders);
+        }
+
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (count($row) === 1 && $delimiter === ';' && strpos((string) $row[0], ';') !== false) {
+                $row = str_getcsv((string) $row[0], $delimiter);
+            }
+            if ($idIndex !== null && array_key_exists($idIndex, $row)) {
+                unset($row[$idIndex]);
+                $row = array_values($row);
+            }
+            $rows[] = $row;
+        }
+
+        fclose($handle);
+
+        $headerMap = [];
+        foreach ($normalizedHeaders as $index => $header) {
+            if ($header === '') {
+                continue;
+            }
+
+            $headerMap[$header] = $index;
+
+            $canonical = preg_replace('/[^a-z0-9]+/', '', $header);
+            if ($canonical !== '' && !isset($headerMap[$canonical])) {
+                $headerMap[$canonical] = $index;
+            }
+        }
+
+        foreach ($rows as $row) {
+            self::consumeMenuHierarchyRow($row, $headers, $headerMap, $menus, $order);
+        }
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+
+        $root = $dom->createElement('menus');
+        $dom->appendChild($root);
+
+        $id = 1;
+        $parentIds = [];
+        foreach ($order as $key) {
+            $entry = $menus[$key] ?? null;
+            if (!$entry) {
+                continue;
+            }
+
+            $level = substr_count($entry['path'], '/') + 1;
+            $parentPath = '';
+            if (strpos($entry['path'], '/') !== false) {
+                $parentPath = substr($entry['path'], 0, strrpos($entry['path'], '/'));
+            }
+            $parentKey = $entry['menutype'] . '|' . $parentPath;
+            $parentId = $parentIds[$parentKey] ?? 1;
+
+            $node = $dom->createElement('menuitem');
+            $node->appendChild($dom->createElement('id', (string) $id));
+            $node->appendChild($dom->createElement('menutype', $entry['menutype']));
+            $node->appendChild($dom->createElement('parent_id', (string) $parentId));
+            $node->appendChild($dom->createElement('level', (string) $level));
+            $node->appendChild($dom->createElement('path', $entry['path']));
+
+            $node->appendChild($dom->createElement('title', $entry['title']));
+            $node->appendChild($dom->createElement('alias', $entry['alias']));
+            $node->appendChild($dom->createElement('link', $entry['link']));
+            $node->appendChild($dom->createElement('type', $entry['type']));
+
+            $node->appendChild($dom->createElement('published', (string) $entry['published']));
+            $node->appendChild($dom->createElement('access', (string) $entry['access']));
+            $node->appendChild($dom->createElement('language', $entry['language']));
+
+            $params = $dom->createElement('params');
+            $params->appendChild($dom->createCDATASection($entry['params']));
+            $node->appendChild($params);
+
+            $node->appendChild($dom->createElement('note', $entry['note']));
+
+            $root->appendChild($node);
+
+            $parentIds[$entry['menutype'] . '|' . $entry['path']] = $id;
             $id++;
         }
 
@@ -486,6 +662,123 @@ class Jdb2xmlTagConversionHelper
         }
     }
 
+    private static function consumeMenuHierarchyRow(array $row, array $headers, array $headerMap, array &$menus, array &$order): void
+    {
+        $menutype = '';
+        if (isset($headerMap['menutype']) && array_key_exists($headerMap['menutype'], $row)) {
+            $menutype = trim((string) $row[$headerMap['menutype']]);
+        }
+        if ($menutype === '' && array_key_exists(0, $row)) {
+            $menutype = trim((string) $row[0]);
+        }
+        if ($menutype === '') {
+            $menutype = 'mainmenu';
+        }
+
+        $levels = [];
+        foreach ($headers as $index => $header) {
+            $key = mb_strtolower(trim((string) $header));
+            if (!preg_match('/^(niveau|level|parent|child)/', $key)) {
+                continue;
+            }
+            $value = isset($row[$index]) ? trim((string) $row[$index]) : '';
+            if ($value === '') {
+                continue;
+            }
+            $slug = self::slugify($value);
+            if ($slug === '') {
+                continue;
+            }
+            $levels[] = ['title' => $value, 'slug' => $slug];
+        }
+
+        $explicitPath = trim((string) ($row[$headerMap['path'] ?? null] ?? ''));
+        $path = $explicitPath;
+        if ($path === '' && $levels) {
+            $path = implode('/', array_column($levels, 'slug'));
+        }
+
+        if ($path === '') {
+            $fallback = isset($row[1]) ? trim((string) $row[1]) : '';
+            if ($fallback !== '') {
+                $segments = array_map('trim', explode('/', $fallback));
+                $slugSegments = [];
+                foreach ($segments as $seg) {
+                    $slug = self::slugify($seg);
+                    if ($slug !== '') {
+                        $slugSegments[] = $slug;
+                    }
+                }
+                $path = implode('/', $slugSegments);
+            }
+        }
+
+        if ($path === '') {
+            return;
+        }
+
+        $title = trim((string) ($row[$headerMap['title'] ?? null] ?? ''));
+        if ($title === '' && $levels) {
+            $title = end($levels)['title'];
+        }
+        if ($title === '') {
+            $segments = explode('/', $path);
+            $title = ucwords(str_replace('-', ' ', end($segments)));
+        }
+
+        $alias = trim((string) ($row[$headerMap['alias'] ?? null] ?? ''));
+        if ($alias === '') {
+            $alias = self::slugify($title !== '' ? $title : $path);
+        }
+
+        $link = trim((string) ($row[$headerMap['link'] ?? null] ?? ''));
+        if ($link === '') {
+            $link = 'index.php';
+        }
+
+        $type = trim((string) ($row[$headerMap['type'] ?? null] ?? ''));
+        if ($type === '') {
+            $type = 'component';
+        }
+
+        $published = trim((string) ($row[$headerMap['published'] ?? null] ?? ''));
+        if ($published === '') {
+            $published = '1';
+        }
+
+        $access = trim((string) ($row[$headerMap['access'] ?? null] ?? ''));
+        if ($access === '') {
+            $access = '1';
+        }
+
+        $language = trim((string) ($row[$headerMap['language'] ?? null] ?? ''));
+        if ($language === '') {
+            $language = '*';
+        }
+
+        $note = trim((string) ($row[$headerMap['note'] ?? null] ?? ''));
+        $params = trim((string) ($row[$headerMap['params'] ?? null] ?? ''));
+
+        $key = $menutype . '|' . $path;
+        if (!isset($menus[$key])) {
+            $order[] = $key;
+        }
+
+        $menus[$key] = [
+            'menutype' => $menutype,
+            'path' => $path,
+            'title' => $title,
+            'alias' => $alias,
+            'link' => $link,
+            'type' => $type,
+            'published' => $published,
+            'access' => $access,
+            'language' => $language,
+            'params' => $params,
+            'note' => $note,
+        ];
+    }
+
     private static function filterValues(array $values): array
     {
         $values = array_values(array_filter($values, static function ($value) {
@@ -505,15 +798,29 @@ class Jdb2xmlTagConversionHelper
             return mb_strtolower(trim((string) $value));
         }, $row);
 
+        $canonicalNeedles = array_map(static function ($needle) {
+            return preg_replace('/[^a-z0-9]+/', '', $needle);
+        }, $needles);
+
         foreach ($normalized as $value) {
             if ($value === '') {
                 continue;
             }
-            if (in_array($value, $needles, true)) {
-                return true;
-            }
-            foreach ($needles as $needle) {
+
+            $canonicalValue = preg_replace('/[^a-z0-9]+/', '', $value);
+
+            foreach ($needles as $index => $needle) {
+                $canonicalNeedle = $canonicalNeedles[$index];
+
+                if ($value === $needle || ($canonicalNeedle !== '' && $canonicalValue === $canonicalNeedle)) {
+                    return true;
+                }
+
                 if ($needle !== '' && (str_starts_with($value, $needle . '_') || str_starts_with($value, $needle . '-'))) {
+                    return true;
+                }
+
+                if ($canonicalNeedle !== '' && (str_starts_with($canonicalValue, $canonicalNeedle . '_') || str_starts_with($canonicalValue, $canonicalNeedle . '-'))) {
                     return true;
                 }
             }

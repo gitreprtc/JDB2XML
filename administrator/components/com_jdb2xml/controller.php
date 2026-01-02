@@ -76,6 +76,7 @@ class Jdb2xmlController extends BaseController
 
         $rows = array_merge(
             $data['categories'] ?? [],
+            $data['menus'] ?? [],
             $data['phocaTags'] ?? [],
             $data['tags'] ?? [],
             $data['articles'] ?? []
@@ -260,7 +261,7 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/export.php';
         $app = $this->getApplicationWithTokenCheck();
         $type = $app->input->getCmd('export_type', 'all');
-        if (!in_array($type, ['categories', 'tags', 'articles', 'phocagallerytags'], true)) {
+        if (!in_array($type, ['categories', 'menus', 'tags', 'articles', 'phocagallerytags'], true)) {
             $type = 'all';
         }
         if ($type === 'phocagallerytags') {
@@ -284,6 +285,40 @@ class Jdb2xmlController extends BaseController
         } catch (Throwable $e) {
             $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
             Jdb2xmlExportHelper::logBatch($type, false, $e->getMessage());
+        }
+
+        $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+    }
+
+    public function exportcsv()
+    {
+        require_once __DIR__ . '/helpers/export.php';
+        $app = $this->getApplicationWithTokenCheck();
+        $type = $app->input->getCmd('export_type', 'all');
+        if (!in_array($type, ['categories', 'menus', 'tags', 'articles', 'phocagallerytags'], true)) {
+            $type = 'all';
+        }
+        if ($type === 'phocagallerytags') {
+            $db = Factory::getDbo();
+            try {
+                $phocaColumns = $db->getTableColumns('#__phocagallery_categories', false);
+            } catch (Throwable $e) {
+                $phocaColumns = [];
+            }
+            if (empty($phocaColumns)) {
+                $app->enqueueMessage('Phoca Gallery tags not available; nothing to export.', 'warning');
+                $this->setRedirect('index.php?option=com_jdb2xml&view=export');
+                return;
+            }
+        }
+
+        try {
+            $result = Jdb2xmlExportHelper::runCsvType(JPATH_ROOT . '/media/com_jdb2xml/export', $type);
+            $app->enqueueMessage($result, 'message');
+            Jdb2xmlExportHelper::logBatch($type . '-csv', true);
+        } catch (Throwable $e) {
+            $app->enqueueMessage('Export error: ' . $e->getMessage(), 'error');
+            Jdb2xmlExportHelper::logBatch($type . '-csv', false, $e->getMessage());
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
@@ -318,6 +353,8 @@ class Jdb2xmlController extends BaseController
         try {
         if ($type === 'categories') {
             $result = Jdb2xmlTagConversionHelper::convertCsvToCategoriesXml($file['tmp_name']);
+        } elseif ($type === 'menus') {
+            $result = Jdb2xmlTagConversionHelper::convertCsvToMenusXml($file['tmp_name']);
         } elseif ($type === 'phocagallerytags') {
             $result = Jdb2xmlTagConversionHelper::convertCsvToPhocaGalleryTagsXml($file['tmp_name']);
         } elseif ($type === 'articles') {
@@ -329,6 +366,8 @@ class Jdb2xmlController extends BaseController
             $timestamp = date('Ymd_His');
         if ($type === 'categories') {
             $prefix = 'categories';
+        } elseif ($type === 'menus') {
+            $prefix = 'menus';
         } elseif ($type === 'phocagallerytags') {
             $prefix = 'phocagallery_tags';
         } elseif ($type === 'articles') {
@@ -343,6 +382,8 @@ class Jdb2xmlController extends BaseController
 
         if ($type === 'categories') {
             $label = 'categories';
+        } elseif ($type === 'menus') {
+            $label = 'menus';
         } elseif ($type === 'phocagallerytags') {
             $label = 'phoca gallery tags';
         } elseif ($type === 'articles') {

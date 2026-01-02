@@ -39,7 +39,7 @@ class Jdb2xmlRollbackHelper
 
     public static function apply(string $type, string $targetFile, array $createdIds, array $updatedIds): array
     {
-        $type = in_array($type, ['categories', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
+        $type = in_array($type, ['categories', 'menus', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
         if ($targetFile === '') {
             return ['message' => 'No rollback log selected.', 'warning' => null];
         }
@@ -76,6 +76,8 @@ class Jdb2xmlRollbackHelper
             $table = '#__phocagallery_categories';
         } elseif ($type === 'articles') {
             $table = '#__content';
+        } elseif ($type === 'menus') {
+            $table = '#__menu';
         } else {
             $table = '#__categories';
         }
@@ -130,7 +132,7 @@ class Jdb2xmlRollbackHelper
 
     public static function fetchEntities(string $type, array $ids): array
     {
-        $type = in_array($type, ['categories', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
+        $type = in_array($type, ['categories', 'menus', 'tags', 'articles', 'phoca_tags'], true) ? $type : 'categories';
         $ids = array_values(array_unique(array_map('intval', $ids)));
         if (empty($ids)) {
             return [];
@@ -151,6 +153,11 @@ class Jdb2xmlRollbackHelper
             $query = $db->getQuery(true)
                 ->select($db->quoteName(['id', 'title', 'alias']))
                 ->from($db->quoteName('#__content'))
+                ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
+        } elseif ($type === 'menus') {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'title', 'path']))
+                ->from($db->quoteName('#__menu'))
                 ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')');
         } else {
             $query = $db->getQuery(true)
