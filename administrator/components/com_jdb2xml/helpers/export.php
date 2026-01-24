@@ -153,11 +153,16 @@ class Jdb2xmlExportHelper
                 $n = $xml->addChild('tag');
 
                 $title = $t->title ?? $t->name ?? '';
+                $fullTitle = $t->title ?? $title;
                 $alias = $t->alias ?? $t->name ?? '';
+                $categoryFolder = $t->categoryfolder ?? $t->category_folder ?? $t->userfolder ?? '';
 
                 $n->addChild('id', (int) ($t->id ?? 0));
+                $n->addChild('parent_id', (int) ($t->parent_id ?? 0));
                 $n->addChild('title', htmlspecialchars((string) $title));
+                $n->addChild('full_title', htmlspecialchars((string) $fullTitle));
                 $n->addChild('alias', htmlspecialchars((string) $alias));
+                $n->addChild('categoryfolder', htmlspecialchars((string) $categoryFolder));
                 $n->addChild('ordering', (int) ($t->ordering ?? 0));
                 $n->addChild('published', (int) ($t->published ?? 1));
                 $n->addChild('access', (int) ($t->access ?? 1));
