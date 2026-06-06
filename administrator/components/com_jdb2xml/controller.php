@@ -260,7 +260,7 @@ class Jdb2xmlController extends BaseController
         require_once __DIR__ . '/helpers/export.php';
         $app = $this->getApplicationWithTokenCheck();
         $type = $app->input->getCmd('export_type', 'all');
-        if (!in_array($type, ['categories', 'tags', 'articles'], true)) {
+        if (!in_array($type, ['categories', 'phocagallerycategories', 'phocagalleryimages', 'tags', 'articles'], true)) {
             $type = 'all';
         }
 

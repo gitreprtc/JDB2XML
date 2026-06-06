@@ -37,6 +37,15 @@ defined('_JEXEC') or die;
         </form>
       </div>
       <div class="jdb2xml-export-row">
+        <span class="jdb2xml-export-label">Phoca Gallery Images</span>
+        <form action="index.php?option=com_jdb2xml" method="post">
+          <input type="hidden" name="task" value="exportmanual">
+          <input type="hidden" name="export_type" value="phocagalleryimages">
+          <?php echo Joomla\CMS\HTML\HTMLHelper::_('form.token'); ?>
+          <button type="submit" class="btn btn-primary">Manual export</button>
+        </form>
+      </div>
+      <div class="jdb2xml-export-row">
         <span class="jdb2xml-export-label">Articles</span>
         <form action="index.php?option=com_jdb2xml" method="post">
           <input type="hidden" name="task" value="exportmanual">

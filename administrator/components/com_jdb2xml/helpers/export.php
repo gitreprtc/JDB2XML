@@ -121,6 +121,44 @@ class Jdb2xmlExportHelper
         }
 
         // =====================
+        // PHOCA GALLERY IMAGES
+        // =====================
+        if ($type === 'all' || $type === 'phocagalleryimages') {
+            $columns = $db->getTableColumns('#__phocagallery', false);
+            if (empty($columns)) {
+                throw new RuntimeException('Phoca Gallery images table not found');
+            }
+
+            $query = $db->getQuery(true)
+                ->select('*')
+                ->from('#__phocagallery')
+                ->order('id ASC');
+
+            $images = $db->setQuery($query)->loadObjectList();
+
+            $imageFile = $dir . '/phocagallery_images_' . $ts . '.xml';
+            $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><phocagalleryimages/>');
+            $xml->addAttribute('table', '#__phocagallery');
+
+            foreach ($images as $image) {
+                $n = $xml->addChild('image');
+
+                foreach (array_keys($columns) as $field) {
+                    self::addCdata($n, $field, (string) ($image->$field ?? ''));
+                }
+            }
+
+            $xmlString = self::formatXml($xml);
+            if ($xmlString === false) {
+                throw new RuntimeException('XML generation failed (phoca gallery images)');
+            }
+            if (file_put_contents($imageFile, $xmlString) === false) {
+                throw new RuntimeException('Cannot write phoca gallery images XML');
+            }
+            $messages[] = basename($imageFile);
+        }
+
+        // =====================
         // TAGS
         // =====================
         if ($type === 'all' || $type === 'tags') {
