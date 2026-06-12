@@ -10,7 +10,4 @@
     <file type="component" id="com_jdb2xml">administrator/components/com_jdb2xml</file>
     <file type="plugin" id="jdb2xml" group="task">plugins/task/jdb2xml</file>
   </files>
-  <updateservers>
-    <server type="extension" name="JDB2XML Package Updates">https://raw.githubusercontent.com/RobinColbers/com_xmlcatag/main/updates/jdb2xml.xml</server>
-  </updateservers>
 </extension>

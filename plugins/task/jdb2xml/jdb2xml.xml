@@ -10,7 +10,4 @@
     <filename plugin="jdb2xml">jdb2xml.php</filename>
     <folder>src</folder>
   </files>
-  <updateservers>
-    <server type="extension" name="JDB2XML Plugin Updates">https://raw.githubusercontent.com/RobinColbers/com_xmlcatag/main/updates/jdb2xml.xml</server>
-  </updateservers>
 </extension>
