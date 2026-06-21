@@ -14,23 +14,6 @@ defined('_JEXEC') or die;
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=csvconversion">CSV conversie</a>
     <a class="btn btn-secondary" href="index.php?option=com_jdb2xml&view=rollback">Rollback</a>
   </div>
-
-  <h3 class="jdb2xml-hidden">Set-Up</h3>
-  <div class="jdb2xml-hidden">
-    <p>Configure your cron scheduler to call Joomla’s scheduler runner URL (no CLI needed):</p>
-    <ul>
-      <li><strong>Scheduler runner</strong>: <code>https://YOUR-DOMAIN/administrator/index.php?option=com_scheduler&amp;task=run&amp;interval=1</code></li>
-    </ul>
-    <p><strong>Setup steps:</strong></p>
-    <ol>
-      <li>Replace <code>YOUR-DOMAIN</code> with your site domain.</li>
-      <li>Add the URL to your hosting cron scheduler (or system crontab).</li>
-      <li>Set the cron interval to run every minute (the scheduler will decide whether tasks should run based on your per-day schedules).</li>
-      <li>Make sure the Joomla “System - Scheduler” plugin is enabled.</li>
-      <li>Save your Import/Export schedules in this component so tasks are created or updated.</li>
-    </ol>
-    <p>Import and export schedules use the same runner URL.</p>
-  </div>
 </div>
 
 <style>

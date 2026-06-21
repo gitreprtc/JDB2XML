@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<updates>
+  <update>
+    <name>JDB2XML</name>
+    <description>JDB2XML package update.</description>
+    <element>pkg_jdb2xml</element>
+    <type>package</type>
+    <version>1.0.2</version>
+    <client>0</client>
+    <infourl title="JDB2XML on GitHub">https://github.com/gitreprtc/JDB2XML</infourl>
+    <downloads>
+      <downloadurl type="full" format="zip">https://github.com/gitreprtc/JDB2XML/archive/refs/heads/main.zip</downloadurl>
+    </downloads>
+    <targetplatform name="joomla" version="6.*" />
+  </update>
+</updates>

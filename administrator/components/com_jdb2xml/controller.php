@@ -354,12 +354,6 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Failed to save export schedule settings.', 'error');
         } else {
             $app->enqueueMessage('Export schedule settings saved.', 'message');
-            $this->upsertSchedulerTask(
-                'export',
-                'JDB2XML Export',
-                ['schedule' => $schedule],
-                ['rule' => 'interval', 'interval' => 1, 'unit' => 'minute']
-            );
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=export');
@@ -394,12 +388,6 @@ class Jdb2xmlController extends BaseController
             $app->enqueueMessage('Failed to save import schedule settings.', 'error');
         } else {
             $app->enqueueMessage('Import schedule settings saved.', 'message');
-            $this->upsertSchedulerTask(
-                'import',
-                'JDB2XML Automatic Import',
-                ['schedule' => $schedule],
-                ['rule' => 'interval', 'interval' => 1, 'unit' => 'minute']
-            );
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=importautomatic');
@@ -420,111 +408,6 @@ class Jdb2xmlController extends BaseController
         }
 
         $this->setRedirect('index.php?option=com_jdb2xml&view=importautomatic');
-    }
-
-    private function upsertSchedulerTask(string $type, string $title, array $params, array $executionRules): void
-    {
-        $db = Factory::getDbo();
-        $columns = $db->getTableColumns('#__scheduler_tasks');
-        $now = Factory::getDate();
-        $nowSql = $now->toSql();
-        $nullDate = $db->getNullDate();
-        $userId = Factory::getApplication()->getIdentity()->id ?? 0;
-
-        $paramsJson = json_encode($params, JSON_UNESCAPED_UNICODE);
-        $rulesJson = json_encode($executionRules, JSON_UNESCAPED_UNICODE);
-
-        $query = $db->getQuery(true)
-            ->select($db->quoteName('id'))
-            ->from($db->quoteName('#__scheduler_tasks'))
-            ->where($db->quoteName('type') . ' = ' . $db->quote($type));
-        $taskId = (int) $db->setQuery($query)->loadResult();
-
-        $fields = [];
-        if (isset($columns['asset_id'])) {
-            $fields['asset_id'] = 0;
-        }
-        if (isset($columns['title'])) {
-            $fields['title'] = $title;
-        }
-        if (isset($columns['type'])) {
-            $fields['type'] = $type;
-        }
-        if (isset($columns['execution_rules'])) {
-            $fields['execution_rules'] = $rulesJson;
-        }
-        if (isset($columns['params'])) {
-            $fields['params'] = $paramsJson;
-        }
-        if (isset($columns['state'])) {
-            $fields['state'] = 1;
-        }
-        if (isset($columns['enabled'])) {
-            $fields['enabled'] = 1;
-        }
-        if (isset($columns['created'])) {
-            $fields['created'] = $nowSql;
-        }
-        if (isset($columns['created_by'])) {
-            $fields['created_by'] = $userId;
-        }
-        if (isset($columns['checked_out'])) {
-            $fields['checked_out'] = 0;
-        }
-        if (isset($columns['checked_out_time'])) {
-            $fields['checked_out_time'] = $nullDate;
-        }
-        if (isset($columns['modified'])) {
-            $fields['modified'] = $nowSql;
-        }
-        if (isset($columns['modified_by'])) {
-            $fields['modified_by'] = $userId;
-        }
-        if (isset($columns['locked'])) {
-            $fields['locked'] = 0;
-        }
-        if (isset($columns['last_execution'])) {
-            $fields['last_execution'] = $nullDate;
-        }
-        if (isset($columns['next_execution'])) {
-            $intervalMinutes = 1;
-            if (($executionRules['rule'] ?? '') === 'interval') {
-                $intervalMinutes = (int) ($executionRules['interval'] ?? 1);
-            }
-            $next = (clone $now)->modify('+' . max(1, $intervalMinutes) . ' minutes');
-            $fields['next_execution'] = $next->toSql();
-        }
-
-        if ($taskId > 0) {
-            $set = [];
-            foreach ($fields as $column => $value) {
-                $set[] = $db->quoteName($column) . ' = ' . $db->quote($value);
-            }
-            if ($set) {
-                $query = $db->getQuery(true)
-                    ->update($db->quoteName('#__scheduler_tasks'))
-                    ->set($set)
-                    ->where($db->quoteName('id') . ' = ' . (int) $taskId);
-                $db->setQuery($query)->execute();
-            }
-            return;
-        }
-
-        if (!$fields) {
-            return;
-        }
-
-        $columnsList = [];
-        $valuesList = [];
-        foreach ($fields as $column => $value) {
-            $columnsList[] = $db->quoteName($column);
-            $valuesList[] = $db->quote($value);
-        }
-        $query = $db->getQuery(true)
-            ->insert($db->quoteName('#__scheduler_tasks'))
-            ->columns($columnsList)
-            ->values(implode(',', $valuesList));
-        $db->setQuery($query)->execute();
     }
 
     protected function getApplicationWithTokenCheck(): CMSApplicationInterface
