@@ -745,6 +745,11 @@ class Jdb2xmlImportHelper
                     }
                     $changed++;
                 } else {
+                    if (!$dryRun) {
+                        self::ensureArticleAsset($db, (int) $existing->id, $catid, $userId, (string) ($node->title ?? $alias));
+                        self::ensureArticleUcmContent($db, (int) $existing->id);
+                        self::ensureArticleWorkflowAssociation($db, (int) $existing->id);
+                    }
                     $skipped++;
                 }
                 continue;
@@ -942,10 +947,10 @@ class Jdb2xmlImportHelper
             'core_params' => (string) ($content->attribs ?? ''),
             'core_featured' => (int) ($content->featured ?? 0),
             'core_metadata' => (string) ($content->metadata ?? ''),
-            'core_created_time' => (string) ($content->created ?? ''),
-            'core_modified_time' => (string) ($content->modified ?? ''),
-            'core_publish_up' => (string) ($content->publish_up ?? ''),
-            'core_publish_down' => (string) ($content->publish_down ?? ''),
+            'core_created_time' => self::normalizeDateTimeValue($content->created ?? null),
+            'core_modified_time' => self::normalizeDateTimeValue($content->modified ?? null),
+            'core_publish_up' => self::normalizeDateTimeValue($content->publish_up ?? null),
+            'core_publish_down' => self::normalizeDateTimeValue($content->publish_down ?? null),
             'core_language' => (string) ($content->language ?? '*'),
             'core_author_id' => (int) ($content->created_by ?? 0),
             'core_images' => (string) ($content->images ?? ''),
@@ -955,7 +960,7 @@ class Jdb2xmlImportHelper
             'core_hits' => (int) ($content->hits ?? 0),
             'core_catid' => (int) ($content->catid ?? 0),
             'core_asset_id' => (int) ($content->asset_id ?? 0),
-            'core_checked_out_time' => (string) ($content->checked_out_time ?? ''),
+            'core_checked_out_time' => self::normalizeDateTimeValue($content->checked_out_time ?? null),
             'core_checked_out_user_id' => (int) ($content->checked_out ?? 0),
         ];
 
@@ -1042,5 +1047,16 @@ class Jdb2xmlImportHelper
         }
 
         return is_array($columns) ? $columns : [];
+    }
+
+    private static function normalizeDateTimeValue($value)
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '' || $value === '0000-00-00 00:00:00') {
+            return null;
+        }
+
+        return $value;
     }
 }
