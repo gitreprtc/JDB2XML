@@ -967,6 +967,9 @@ class Jdb2xmlImportHelper
         $payload = [];
         foreach ($data as $field => $value) {
             if (isset($columns[$field])) {
+                if ($value === null) {
+                    continue;
+                }
                 $payload[$field] = $value;
             }
         }
